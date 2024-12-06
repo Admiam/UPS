@@ -1,0 +1,7 @@
+\babel@toc {czech}{}\relax 
+\contentsline {section}{\numberline {1}Zadání}{3}{section.1}%
+\contentsline {section}{\numberline {2}Analýza úlohy}{3}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Popis protokolu}{3}{subsection.2.1}%
+\contentsline {section}{\numberline {3}Ipmlementace}{5}{section.3}%
+\contentsline {section}{\numberline {4}Uživatelská příručka}{5}{section.4}%
+\contentsline {section}{\numberline {5}Závěr}{5}{section.5}%
