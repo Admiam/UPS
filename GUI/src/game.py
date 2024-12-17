@@ -234,7 +234,7 @@ class Game:
 
     def process_selection(self):
         """Process the player's selection and notify the server."""
-        choices = ["Rock", "Paper", "Scissors"]
+        choices = ["rock", "paper", "scissors"]
         if self.selected_button is not None:
             choice = choices[self.selected_button]
         else:

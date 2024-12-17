@@ -1,0 +1,46 @@
+\babel@toc {czech}{}\relax 
+\contentsline {chapter}{\numberline {1}Úvod}{6}{chapter.1}%
+\contentsline {chapter}{\numberline {2}Analýza existujících řešení}{7}{chapter.2}%
+\contentsline {section}{\numberline {2.1}Přehled dostupných softwarových řešení}{7}{section.2.1}%
+\contentsline {subsection}{\numberline {2.1.1}Webové portály}{7}{subsection.2.1.1}%
+\contentsline {subsection}{\numberline {2.1.2}Mobilní aplikace}{8}{subsection.2.1.2}%
+\contentsline {section}{\numberline {2.2}Detailní analýza vybraných aplikací}{8}{section.2.2}%
+\contentsline {subsection}{\numberline {2.2.1}Pesweb}{9}{subsection.2.2.1}%
+\contentsline {subsection}{\numberline {2.2.2}Anidef}{10}{subsection.2.2.2}%
+\contentsline {subsection}{\numberline {2.2.3}Petfinder}{10}{subsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.2.4}Dog-point}{11}{subsection.2.2.4}%
+\contentsline {subsection}{\numberline {2.2.5}Puppio}{12}{subsection.2.2.5}%
+\contentsline {section}{\numberline {2.3}Srovnání dostupných řešení}{13}{section.2.3}%
+\contentsline {subsection}{\numberline {2.3.1}Shrnutí zjištění}{13}{subsection.2.3.1}%
+\contentsline {chapter}{\numberline {3}Návrh nového řešení}{14}{chapter.3}%
+\contentsline {section}{\numberline {3.1}Sběr požadavků}{14}{section.3.1}%
+\contentsline {section}{\numberline {3.2}Uživatelské persony a případy užití}{14}{section.3.2}%
+\contentsline {subsection}{\numberline {3.2.1}Zájemce o adopci}{15}{subsection.3.2.1}%
+\contentsline {subsection}{\numberline {3.2.2}Zaměstnanec útulku}{15}{subsection.3.2.2}%
+\contentsline {section}{\numberline {3.3}Návrh aplikace}{15}{section.3.3}%
+\contentsline {subsection}{\numberline {3.3.1}Hlavní obrazovka aplikace}{15}{subsection.3.3.1}%
+\contentsline {subsection}{\numberline {3.3.2}Vyhledávací obrazovka}{17}{subsection.3.3.2}%
+\contentsline {subsection}{\numberline {3.3.3}Obrazovka oblíbených}{18}{subsection.3.3.3}%
+\contentsline {subsection}{\numberline {3.3.4}Obrazovka profilu}{19}{subsection.3.3.4}%
+\contentsline {section}{\numberline {3.4}Výběr technologií a zdůvodnění volby}{20}{section.3.4}%
+\contentsline {subsection}{\numberline {3.4.1}Použitá technologie pro vývoj aplikace}{20}{subsection.3.4.1}%
+\contentsline {subsection}{\numberline {3.4.2}Použitá technologie pro backend}{20}{subsection.3.4.2}%
+\contentsline {section}{\numberline {3.5}Shrnutí návrhu}{21}{section.3.5}%
+\contentsline {chapter}{\numberline {4}Implementace}{22}{chapter.4}%
+\contentsline {section}{\numberline {4.1}Přehled vývojového prostředí a nástrojů}{22}{section.4.1}%
+\contentsline {section}{\numberline {4.2}Popis klíčových modulů a komponent}{22}{section.4.2}%
+\contentsline {section}{\numberline {4.3}Implementace hlavních funkcí}{22}{section.4.3}%
+\contentsline {section}{\numberline {4.4}Výzvy při vývoji a jejich řešení}{22}{section.4.4}%
+\contentsline {chapter}{\numberline {5}Testování a ověření}{23}{chapter.5}%
+\contentsline {section}{\numberline {5.1}Testovací metodologie}{23}{section.5.1}%
+\contentsline {section}{\numberline {5.2}Testovací scénáře a případy}{23}{section.5.2}%
+\contentsline {section}{\numberline {5.3}Shrnutí výsledků testování}{23}{section.5.3}%
+\contentsline {chapter}{\numberline {6}Návrhy na budoucí rozšíření}{24}{chapter.6}%
+\contentsline {section}{\numberline {6.1}Doporučené budoucí funkce nebo vylepšení}{24}{section.6.1}%
+\contentsline {section}{\numberline {6.2}Možné integrace}{24}{section.6.2}%
+\contentsline {section}{\numberline {6.3}Nápady na škálování aplikace}{24}{section.6.3}%
+\contentsline {chapter}{\numberline {7}Závěr}{25}{chapter.7}%
+\contentsline {section}{\numberline {7.1}Shrnutí provedené práce}{25}{section.7.1}%
+\contentsline {section}{\numberline {7.2}Vyhodnocení aplikace vzhledem k původním cílům}{25}{section.7.2}%
+\contentsline {section}{\numberline {7.3}Závěrečné zhodnocení a možnosti dalšího vývoje}{25}{section.7.3}%
+\contentsline {chapter}{\numberline {A}První příloha}{26}{appendix.A}%

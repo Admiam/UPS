@@ -5,19 +5,23 @@
 void GameLogic::process_round(const PlayerMove &player1, const PlayerMove &player2)
 {
     // Determine the winner
+    // std::cout << "Player 1 choice: " << extract_payload(player1.choice) << "\n";
+    // std::cout << "Player 2 choice: " << extract_payload(player2.choice) << "\n";
     std::string result = determine_winner(player1.choice, player2.choice);
     std::string trimmed_choice1 = normalize_string(trim(extract_payload(player1.choice)));
 
     if (result == "draw")
     {
-        std::cout << "Round is a draw!\n";
+        // std::cout << "Round is a draw!\n";
     }
     else if (result == trimmed_choice1)
     {
+        // std::cout << "Player 1 wins the round!\n";
         player_scores[player1.player_id]++; // Increment winner's score
     }
     else
     {
+        // std::cout << "Player 2 wins the round!\n";
         player_scores[player2.player_id]++; // Increment winner's score
     }
 }

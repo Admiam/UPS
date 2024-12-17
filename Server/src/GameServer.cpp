@@ -182,22 +182,22 @@ void GameServer::start_reconnection_timer(const std::string &group_id, const std
             std::cout << "Reconnection timeout for player " << player_id << " in group " << group_id << "\n";
 
             auto group_it = groups.find(group_id);
-            std::cout << "group1\n";
+            // std::cout << "group1\n";
 
             if (group_it != groups.end())
             {
-                std::cout << "group2\n";
+                // std::cout << "group2\n";
 
                 Group &group = group_it->second;
 
                 // Notify the remaining player to return to the waiting screen
                 for (const auto &player : group.players)
                 {
-                    std::cout << "group3\n";
+                    // std::cout << "group3\n";
 
                     if (player.player_id != player_id && player.is_connected)
                     {
-                        std::cout << "group4\n";
+                        // std::cout << "group4\n";
 
                         std::string return_to_waiting_msg = "return_to_waiting";
                         send(player.socket_fd, return_to_waiting_msg.c_str(), return_to_waiting_msg.size(), 0);
@@ -205,7 +205,7 @@ void GameServer::start_reconnection_timer(const std::string &group_id, const std
                     }
                 }
             }
-            std::cout << "group5\n";
+            // std::cout << "group5\n";
 
             handle_reconnection_timeout(group_id, player_id);
             disconnected_players.erase(it);
