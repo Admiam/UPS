@@ -3,15 +3,22 @@
 #include <algorithm>
 #include <thread>
 #include <chrono>
+#include <iomanip>
 
 void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd)
 {
+    std::cout << "kokot0" << std::endl;
     {
+        std::cout << "kokot0.1" << std::endl;
         std::lock_guard<std::mutex> lock(game_mutex);
-
+        std::cout << "kokot1" << std::endl;
         auto it = disconnected_players.find(player_id);
+        std::cout << "kokot2" << std::endl;
+
         if (it != disconnected_players.end() && it->second.is_reconnecting)
         {
+            std::cout << "kokot3" << std::endl;
+
             // Player is expected to reconnect
             std::string group_id = it->second.group_id;
             disconnected_players.erase(it);
@@ -67,9 +74,15 @@ void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd
         }
     }
 
+    std::cout << "kokot4" << std::endl;
+
     // Add new player to the queue if they are not reconnecting
     player_queue.push(std::make_pair(player_id, socket_fd));
+    std::cout << "kokot5" << std::endl;
+
     socket_to_player_id[socket_fd] = player_id; // Update mapping
+    std::cout << "kokot6" << std::endl;
+
     std::cout << "Added player " << player_id << " to the queue\n";
     attempt_to_form_group();
 }
@@ -330,8 +343,13 @@ void GameServer::handle_reconnection(const std::string &player_id, int socket_fd
 
 int GameServer::get_socket_fd_for_player(const std::string &player_id) const
 {
+    // std::cout << "Player ID: " << player_id << "\n";
     for (const auto &entry : socket_to_player_id)
     {
+       
+        // std::cout << "Entry first: " << entry.first << " vs player id: " << player_id << "\n";
+        // std::cout << "Entry second: " << entry.second << " vs player id: " << player_id << "\n";
+
         if (entry.second == player_id)
         {
             // std::cout << "Player ID: " << player_id << " Socket FD: " << entry.first << "\n";
@@ -485,4 +503,62 @@ void GameServer::mark_player_ready(const std::string &group_id, const std::strin
     {
         notify_players_to_start(group);
     }
+}
+
+void GameServer::handle_return_to_lobby(const std::string &player_id)
+{
+ 
+    // Remove the player from any active group
+    for (auto &[group_id, group] : groups)
+    {
+        if (group.contains_player(player_id))
+        {
+            group.remove_player(player_id);
+            std::cout << "Removed player " << player_id << " from group " << group_id << ".\n";
+
+            // If the group is empty, remove it
+            if (group.players.empty())
+            {
+                groups.erase(group_id);
+                std::cout << "Group " << group_id << " has been removed as it is empty.\n";
+            }
+            break;
+        }
+    }
+    // std::cout << "kokot0\n";
+    // Find the socket_fd associated with player_id
+    int socket_fd = get_socket_fd_for_player(player_id);
+    // std::cout << "Socket_fd: " << socket_fd << "\n";
+    if (socket_fd != -1)
+    {
+        // Add the player back to the queue
+        add_player_to_queue(player_id, socket_fd);
+        std::cout << "Player " << player_id << " has been added back to the lobby.\n";
+    }
+    else
+    {
+        std::cerr << "Error: Could not find socket_fd for player_id " << player_id << "\n";
+    }
+    
+    
+}
+
+void GameServer::print_to_hex(const std::string &str) const
+{
+    for (unsigned char c : str)
+    {
+        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
+    }
+    std::cout << std::dec << "\n";
+}
+
+std::string GameServer::normalize_player_id(const std::string &player_id) const
+{
+    // Remove trailing null bytes or other padding
+    size_t end = player_id.find_last_not_of('\0');
+    if (end != std::string::npos)
+    {
+        return player_id.substr(0, end + 1);
+    }
+    return player_id;
 }

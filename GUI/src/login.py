@@ -15,9 +15,9 @@ class Login:
         self.entry_player = tk.Entry(root)
         self.entry_player.grid(row=1, column=1, padx=10, pady=10)
 
-        tk.Label(root, text="IP:").grid(row=2, column=0, padx=10, pady=10)
-        self.ip = tk.Entry(root)
-        self.ip.grid(row=2, column=1, padx=10, pady=10)
+        # tk.Label(root, text="IP:").grid(row=2, column=0, padx=10, pady=10)
+        # self.ip = tk.Entry(root)
+        # self.ip.grid(row=2, column=1, padx=10, pady=10)
 
         # Login button
         self.login_button = tk.Button(root, text="Login", command=self.attempt_login)
@@ -25,7 +25,8 @@ class Login:
 
     def attempt_login(self):
         # Hard-coded server IP (or you can re-enable server IP entry in the GUI)
-        server_ip = self.ip.get()
+        # server_ip = self.ip.get()
+        server_ip = "127.0.0.1"
         player_name = self.entry_player.get()
 
         if not player_name:

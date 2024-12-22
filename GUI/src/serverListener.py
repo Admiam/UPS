@@ -198,3 +198,4 @@ class ServerListener:
             self.waiting_screen.after(0, func, *args)
         else:
             print("Root window no longer exists. Skipping GUI update.")
+

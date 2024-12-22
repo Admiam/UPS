@@ -87,9 +87,9 @@ public:
     bool register_choice(const std::string &group_id, const std::string &player_id, const std::string &choice);
     void process_group_round(const std::string &group_id);
     void handle_ready_message(const std::string &player_id);
+    void handle_return_to_lobby(const std::string &player_id);
 
-private : 
-    std::unordered_map<std::string, Group> groups;
+    private : std::unordered_map<std::string, Group> groups;
     std::unordered_map<std::string, Player *> player_directory;
     std::queue<std::pair<std::string, int>> player_queue; 
     std::unordered_map<std::string, DisconnectedPlayer> disconnected_players;
@@ -104,4 +104,6 @@ private :
     void notify_players_to_start(const Group &group);
     void handle_reconnection(const std::string &player_id, int socket_fd);
     void mark_player_ready(const std::string &group_id, const std::string &player_id);
+    void print_to_hex(const std::string &str) const;
+    std::string normalize_player_id(const std::string &player_id) const;
 };

@@ -36,7 +36,7 @@ class Game:
         self.p1_score = p1_score
         self.p2_score = p2_score
         self.round = current_round
-        self.max_rounds = 10
+        self.max_rounds = 2
         self.selected_button = None
         self.is_frozen = False
         self.game_active = False  # Game starts inactive until the server signals
@@ -230,7 +230,7 @@ class Game:
         self.game_window.destroy()
         if self.root and self.root.winfo_exists():
             self.root.deiconify()
-        self.server.notify_server_lobby(self.player_name)
+        self.notify_server_lobby(self.player_name)
 
     def process_selection(self):
         """Process the player's selection and notify the server."""
@@ -288,6 +288,27 @@ class Game:
             print(f"Sent choice '{choice}' (as index) to server.")
         except Exception as e:
             print(f"Failed to send choice to server: {e}")
+
+    def notify_server_lobby(self, player_name):
+        """Notify the server that the player is returning to the lobby."""
+        try:
+            # Prepare the message components
+            magic = "RPS|".encode('utf-8')
+            command = "return_to_lobby|".encode('utf-8')
+            player = player_name.encode('utf-8')
+
+            # Calculate the total message length
+            total_length = len(magic) + len(command) + len(player)
+
+            # Pack the data
+            buffer = struct.pack(f'!{len(magic)}s{len(command)}sI{len(player)}s',
+                                 magic, command, total_length, player)
+
+            # Send the packed message to the server
+            self.server_listener.sendall(buffer)
+            print(f"Notified server: {buffer}")
+        except Exception as e:
+            print(f"Error notifying server to return to lobby: {e}")
 
     def on_button_click(self, button_index):
         # Deselect the previously selected button

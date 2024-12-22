@@ -200,6 +200,26 @@ void TCPServer::handleClientData(int fd)
                     game_server.process_group_round(group_id);
                 }
             }
+            else if (parts.size() > 1 && parts[1] == "return_to_lobby")
+            {
+                if (parts.size() < 3)
+                {
+                    std::cerr << "Invalid 'return_to_lobby' message format.\n";
+                    return;
+                }
+
+                std::string player_id = socket_to_player_id[fd];
+                ;
+
+                std::cout << "Player " << player_id << " is returning to the lobby.\n";
+
+                // Notify the GameServer to handle the return to lobby
+                game_server.handle_return_to_lobby(player_id);
+
+                // Send confirmation to the client
+                std::string confirmation_msg = "lobby|success";
+                send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
+            }
         }
         else
         {
