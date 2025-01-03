@@ -2,6 +2,7 @@ import threading
 from game import Game
 from tkinter import messagebox
 import tkinter as tk
+import socket
 
 
 class ServerListener:
@@ -23,6 +24,7 @@ class ServerListener:
         self.player_score = 0
         self.opponent_name = None
         self.waiting_screen_active = False
+        self.ping_active = True
 
         tk.Label(self.waiting_screen, text="Waiting for other players...", font=("Arial", 16)).pack(pady=20)
 
@@ -30,7 +32,33 @@ class ServerListener:
         cancel_button = tk.Button(self.waiting_screen, text="Cancel", command=self.cancel_waiting)
         cancel_button.pack(pady=10)
         # Start the listener thread
-        threading.Thread(target=self.listen_to_server, daemon=True).start()
+        self.thread = threading.Thread(target=self.listen_to_server, daemon=True)
+        self.thread.start()
+
+        self.ping_thread = threading.Thread(target=self.ping, daemon=True)
+        self.ping_thread.start()
+        # Start ping thread
+        # self.start_pinging()
+
+        # Handle window close
+        self.waiting_screen.protocol("WM_DELETE_WINDOW", self.cleanup)
+    def ping(self):
+        """Send periodic pings to the server."""
+        while self.ping_active:
+            try:
+                self.client_socket.sendall("ping".encode("utf-8"))
+                threading.Event().wait(5)  # Wait for 5 seconds
+            except Exception as e:
+                print(f"Error sending ping: {e}")
+                self.ping_active = False  # Stop pinging if an error occurs
+                break
+
+    def cleanup(self):
+        """Handle cleanup when the window is closed."""
+        self.ping_active = False
+        self.client_socket.sendall(b"exit|" + self.player_name.encode("utf-8"))
+        self.client_socket.close()
+        self.waiting_screen.destroy()
 
     def register_game_instance(self, game_window):
         """Register the game instance for updates."""
@@ -147,9 +175,12 @@ class ServerListener:
 
     def handle_return_to_waiting(self):
         print("Returning to waiting screen.")
-        if self.game_instance:
-            self.game_instance.freeze_game()
-            self.update_gui_safe(self.return_to_waiting_screen)
+        # if self.game_instance:
+            # self.game_instance.freeze_game()
+            # self.update_gui_safe(self.return_to_waiting_screen)
+        self.game_instance.game_window.destroy()
+        if self.waiting_screen and self.waiting_screen.winfo_exists():
+            self.waiting_screen.deiconify()
 
     def handle_server_error(self):
         messagebox.showerror("Error", "An error occurred on the server.")
@@ -199,3 +230,27 @@ class ServerListener:
         else:
             print("Root window no longer exists. Skipping GUI update.")
 
+    def on_window_close(self):
+        """Handle the window close event."""
+        if self.client_socket:
+            try:
+                self.client_socket.close()  # Ensure the socket is closed
+            except Exception as e:
+                print(f"Error closing socket: {e}")
+        self.waiting_screen.destroy()  # Destroy the Tkinter window
+        print("Application closed.")
+        exit(0)  # Exit the program
+
+    def notify_server_lobby(self, player_name):
+        """Notify the server that the player is returning to the lobby."""
+        try:
+            self.client_socket.sendall(f"return_to_lobby|{player_name}".encode("utf-8"))
+        except Exception as e:
+            print(f"Failed to notify server: {e}")
+
+    def disconnect_client(self):
+        """Disconnect the client from the server."""
+        self.ping_active = False
+        if self.thread.is_alive():
+            self.thread.join()  # Ensure the thread exits cleanly
+        self.client_socket.close()

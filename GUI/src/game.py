@@ -4,6 +4,7 @@ from tkinter import font as tkfont
 import random
 from functools import partial
 import struct  # Make sure this is at the top of your file
+import sys
 
 
 class Game:
@@ -36,10 +37,11 @@ class Game:
         self.p1_score = p1_score
         self.p2_score = p2_score
         self.round = current_round
-        self.max_rounds = 2
+        self.max_rounds = 10
         self.selected_button = None
         self.is_frozen = False
         self.game_active = False  # Game starts inactive until the server signals
+        self.ping_active = True  # Flag to control pinging
 
         # Create the game window
         self.game_window = tk.Toplevel()
@@ -53,6 +55,22 @@ class Game:
         # Notify the server of readiness
         self.send_ready_message()
         self.server.register_game_instance(self.game_window)  # Register with the ServerListener
+
+        self.game_window.protocol("WM_DELETE_WINDOW", self.cleanup)
+
+    def cleanup(self):
+        """Clean up resources when the game window is closed."""
+        self.ping_active = False  # Stop the pinging process
+        try:
+            self.server_listener.notify_server_lobby(self.player_name)  # Notify server
+            self.server_listener.disconnect_client()  # Disconnect the socket
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        finally:
+            self.game_window.destroy()  # Destroy the game window
+            print("Exiting program...")
+            # Delay the exit to ensure threads have enough time to terminate gracefully
+            self.root.after(100, sys.exit)
 
     def setup_top_bar(self):
         """Set up the top bar UI elements."""

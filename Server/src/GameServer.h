@@ -106,4 +106,7 @@ public:
     void mark_player_ready(const std::string &group_id, const std::string &player_id);
     void print_to_hex(const std::string &str) const;
     std::string normalize_player_id(const std::string &player_id) const;
+    void print_groups() const;
+    void print_player_queue() const;
+    void print_disconnected_players() const;
 };
