@@ -28,6 +28,7 @@ class ServerListener:
         self.opponent_name = None
         self.waiting_screen_active = False
         self.ping_active = True
+        self.is_reconnecting = False
         self.reconnection_attempts = 30  # Allow 30 seconds to reconnect
         self.last_pong_received = time.time()  # Timestamp for the last "pong"
 
@@ -336,8 +337,12 @@ class ServerListener:
 
     def handle_internet_reconnection(self):
         """Handle reconnection attempts when the connection is lost."""
+        if self.is_reconnecting:
+            return  # Avoid overlapping reconnection attempts
+
+        self.is_reconnecting = True
         self.ping_active = False  # Stop pinging
-        # self.close_connection("Connection lost")  # Close the current connection
+        self.close_connection("Connection lost")  # Close the current connection
         self.show_reconnecting_screen()  # Show reconnecting message
 
         for attempt in range(self.reconnection_attempts):
@@ -362,7 +367,7 @@ class ServerListener:
 
     def close_connection(self, reason="Disconnected"):
         """Disconnect the client and clean up resources."""
-        print(f"ERORR > connection lost: {reason}")
+        print(f"ERORR > {reason}")
         try:
             if self.client_socket:
                 self.client_socket.close()  # Close the socket
@@ -371,4 +376,4 @@ class ServerListener:
             print(f"Error closing socket: {e}")
 
         # Redirect to the login screen
-        self.update_gui_safe(self.show_login_window)
+        # self.update_gui_safe(self.show_login_window)
