@@ -3,10 +3,11 @@ from game import Game
 from tkinter import messagebox
 import tkinter as tk
 import socket
+import time
 
 
 class ServerListener:
-    def __init__(self, waiting_screen, client_socket, player_name):
+    def __init__(self, waiting_screen, client_socket, player_name, server, port):
         """
         Centralized server listener that manages communication and application state.
 
@@ -22,9 +23,14 @@ class ServerListener:
         self.current_round = 0
         self.opponent_score = 0
         self.player_score = 0
+        self.server = server
+        self.port = port
         self.opponent_name = None
         self.waiting_screen_active = False
         self.ping_active = True
+        self.reconnection_attempts = 30  # Allow 30 seconds to reconnect
+        self.last_pong_received = time.time()  # Timestamp for the last "pong"
+
 
         tk.Label(self.waiting_screen, text="Waiting for other players...", font=("Arial", 16)).pack(pady=20)
 
@@ -44,14 +50,34 @@ class ServerListener:
         self.waiting_screen.protocol("WM_DELETE_WINDOW", self.cleanup)
     def ping(self):
         """Send periodic pings to the server."""
+        # while self.ping_active:
+        #     try:
+        #         self.client_socket.sendall("RPS|ping".encode("utf-8"))
+        #         threading.Event().wait(5)  # Wait for 5 seconds
+        #         response = self.client_socket.recv(1024).decode("utf-8")
+        #         if response.strip() != "RPS|pong;":
+        #             print("Invalid pong response from server")
+        #             self.disconnect_client()
+        #             break
+        #     except Exception as e:
+        #         print(f"Ping error: {e}")
+        #         self.disconnect_client()
+        #         break
         while self.ping_active:
             try:
-                self.client_socket.sendall("ping".encode("utf-8"))
-                threading.Event().wait(5)  # Wait for 5 seconds
+                if time.time() - self.last_pong_received > 10:  # Check for timeout
+                    print("No pong received within timeout period.")
+                    self.handle_internet_reconnection()
+                    return
+
+                self.client_socket.sendall(b"RPS|ping")
+                print("Ping sent to server.")
+                time.sleep(1)  # Send ping every 5 seconds
+
             except Exception as e:
-                print(f"Error sending ping: {e}")
-                self.ping_active = False  # Stop pinging if an error occurs
-                break
+                print(f"Ping error: {e}")
+                self.handle_internet_reconnection()
+                return
 
     def cleanup(self):
         """Handle cleanup when the window is closed."""
@@ -67,14 +93,35 @@ class ServerListener:
 
     def listen_to_server(self):
         """Continuously listen for updates from the server."""
+        buffer = ""
         while True:
             try:
                 response = self.client_socket.recv(1024).decode("utf-8")
                 print(f"Server response: {response}")
-                self.route_server_message(response)
-            except Exception as e:
+                buffer += response  # Append new data to the buffer
+
+                while ";" in buffer:  # Process messages
+                    message, buffer = buffer.split(";", 1)
+                    if message.startswith("RPS|"):
+                        print(f"Valid message: {message}")
+                        if message == "RPS|pong":
+                            self.last_pong_received = time.time()  # Update pong timestamp
+                            print("Received valid pong from server.")
+                        else:
+                            print(f"Valid message: {message}")
+                            self.route_server_message(message[4:])
+                    else:
+                        print(f"Invalid message received: {message}")
+                        self.disconnect_client("Invalid message received")  # Disconnect with error
+                        return  # Exit the thread after disconnecting
+
+            except OSError as e:
                 print(f"Connection lost or error listening to server: {e}")
-                self.update_gui_safe(self.cancel_waiting)
+                self.handle_internet_reconnection()
+                break
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                self.disconnect_client("Unexpected error occurred")
                 break
 
     def route_server_message(self, message):
@@ -248,9 +295,66 @@ class ServerListener:
         except Exception as e:
             print(f"Failed to notify server: {e}")
 
-    def disconnect_client(self):
-        """Disconnect the client from the server."""
-        self.ping_active = False
-        if self.thread.is_alive():
-            self.thread.join()  # Ensure the thread exits cleanly
-        self.client_socket.close()
+    def disconnect_client(self, error_message="Connection lost"):
+        """Disconnect the client and reset state."""
+        self.ping_active = False  # Stop pinging
+        try:
+            if self.client_socket:
+                self.client_socket.close()  # Close the socket connection
+                print("Disconnected from server.")
+        except Exception as e:
+            print(f"Error while closing client socket: {e}")
+
+        # Show error message and transition to login on the main thread
+        if self.waiting_screen and self.waiting_screen.winfo_exists():
+            self.waiting_screen.after(0, self.show_error_and_login, error_message)
+        else:
+            print(f"Error displaying message: {error_message}")
+
+    def show_error_and_login(self, error_message):
+        """Show an error message and reopen the login window."""
+        messagebox.showerror("Error", error_message)
+        self.show_login_window()
+
+    def show_login_window(self):
+        """Show the login window after disconnecting."""
+        # Destroy any existing windows
+        if self.waiting_screen and self.waiting_screen.winfo_exists():
+            self.waiting_screen.destroy()
+        if self.game_instance and self.game_instance.game_window and self.game_instance.game_window.winfo_exists():
+            self.game_instance.game_window.destroy()
+
+        # Create a new root for the login window
+        self.waiting_screen.after(0, self.create_login_window)
+
+    def create_login_window(self):
+        """Create the login window."""
+        new_root = tk.Tk()
+        from login import Login  # Import Login dynamically to avoid circular imports
+        Login(new_root)
+        new_root.mainloop()
+
+    def handle_internet_reconnection(self):
+        """Handle reconnection attempts when the connection is lost."""
+        self.ping_active = False  # Stop pinging
+        self.disconnect_client("Connection lost")  # Close the current connection
+        self.show_reconnecting_screen()  # Show reconnecting message
+
+        for attempt in range(self.reconnection_attempts):
+            try:
+                print(f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
+                self.client_socket.connect((self.server, self.port))  # Replace with server IP and port
+                print("Reconnected to server.")
+                self.ping_active = True
+                threading.Thread(target=self.ping, daemon=True).start()
+                return
+            except Exception as e:
+                print(f"Reconnection failed: {e}")
+                time.sleep(1)  # Wait 1 second before retrying
+
+        print("Failed to reconnect. Returning to login screen.")
+        self.disconnect_client()
+
+    def show_reconnecting_screen(self):
+        """Display a reconnecting message to the user."""
+        messagebox.showinfo("Reconnecting", "Attempting to reconnect... Please wait.")

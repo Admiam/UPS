@@ -88,12 +88,16 @@ public:
     void process_group_round(const std::string &group_id);
     void handle_ready_message(const std::string &player_id);
     void handle_return_to_lobby(const std::string &player_id);
+    void update_ping(const std::string &player_id);
+    void check_for_timeouts();
 
-    private : std::unordered_map<std::string, Group> groups;
+private: 
+    std::unordered_map<std::string, Group> groups;
     std::unordered_map<std::string, Player *> player_directory;
     std::queue<std::pair<std::string, int>> player_queue; 
     std::unordered_map<std::string, DisconnectedPlayer> disconnected_players;
     std::unordered_map<int, std::string> socket_to_player_id;
+    std::unordered_map<std::string, std::chrono::steady_clock::time_point> player_last_ping;
     int next_group_number;
     std::mutex game_mutex;
 
@@ -109,4 +113,5 @@ public:
     void print_groups() const;
     void print_player_queue() const;
     void print_disconnected_players() const;
+    void disconnect_player_due_to_timeout(const std::string &player_id);
 };

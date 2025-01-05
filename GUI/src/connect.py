@@ -2,11 +2,11 @@
 import socket
 import struct
 
-def connect_to_server(server_ip, player_name):
-    server_port = 4242  # Define your server's port
+def connect_to_server(server_ip, player_name, port):
+    # server_port = 4242  # Define your server's port
     try:
         s = socket.socket()
-        s.connect((server_ip, server_port))
+        s.connect((server_ip, port))
 
         # Construct the login message
         magic = "RPS|".encode('utf-8')

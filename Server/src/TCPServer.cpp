@@ -69,6 +69,7 @@ void TCPServer::setupSocket()
 void TCPServer::run()
 {
     fd_set tests; // Temporary file descriptor set for select()
+    auto last_check = std::chrono::steady_clock::now();
 
     for (;;)
     {
@@ -98,6 +99,13 @@ void TCPServer::run()
                     handleClientData(fd);
                 }
             }
+        }
+        // Periodically check for timeouts
+        auto now = std::chrono::steady_clock::now();
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_check).count() >= 5)
+        {
+            game_server.check_for_timeouts();
+            last_check = now;
         }
     }
 }
@@ -141,17 +149,24 @@ void TCPServer::handleClientData(int fd)
         if (bytes_received > 0)
         {
             std::string message(buffer.begin(), buffer.begin() + bytes_received);
-
             std::cout << "Message received: " << message << std::endl;
-
             std::vector<std::string> parts = split(message, '|');
-
-            if (parts.size() > 1 && parts[1] == "login")
+            if (message == "RPS|ping")
             {
-                std::string player_id = parts[2];
-                game_server.add_player_to_queue(player_id, fd);
-                socket_to_player_id[fd] = player_id; // Map socket FD to player ID
+                std::string player_id = get_player_id_from_socket(fd);
+                game_server.update_ping(player_id);
+                // Respond with a pong
+                std::string pong_message = "RPS|pong;";
+                std::cout << "send: " << pong_message << "\n";
+
+                send(fd, pong_message.c_str(), pong_message.size(), 0);
             }
+            else if (parts.size() > 1 && parts[1] == "login")
+                {
+                    std::string player_id = parts[2];
+                    game_server.add_player_to_queue(player_id, fd);
+                    socket_to_player_id[fd] = player_id; // Map socket FD to player ID
+                }
             else if (parts.size() > 1 && parts[1] == "lobby")
             {
                 if (parts.size() == 3)
@@ -166,6 +181,7 @@ void TCPServer::handleClientData(int fd)
                     std::cerr << "Invalid 'lobby' message format.\n";
                     std::string error_msg = "error|invalid_message_format";
                     send(fd, error_msg.c_str(), error_msg.size(), 0);
+                    // TODO disconnect client
                 }
             }
             else if (parts.size() > 1 && parts[1] == "ready")
@@ -217,10 +233,10 @@ void TCPServer::handleClientData(int fd)
                 game_server.handle_return_to_lobby(player_id);
 
                 // Send confirmation to the client
-                std::string confirmation_msg = "lobby|success";
+                std::string confirmation_msg = "RPS|lobby|success;";
                 send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
             }
-        }
+            }
         else
         {
             std::cerr << "recv failed on fd " << fd << ": " << strerror(errno) << "\n";
