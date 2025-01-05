@@ -337,13 +337,14 @@ class ServerListener:
     def handle_internet_reconnection(self):
         """Handle reconnection attempts when the connection is lost."""
         self.ping_active = False  # Stop pinging
-        self.close_connection("Connection lost")  # Close the current connection
+        # self.close_connection("Connection lost")  # Close the current connection
         self.show_reconnecting_screen()  # Show reconnecting message
 
         for attempt in range(self.reconnection_attempts):
             try:
                 print(f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
                 self.client_socket.connect((self.server, self.port))  # Replace with server IP and port
+                self.game_instance.number_label = tk.Label(self.game_instance, text=f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}", font=self.game_instance.big_font)
                 print("Reconnected to server.")
                 self.ping_active = True
                 threading.Thread(target=self.ping, daemon=True).start()
@@ -361,7 +362,7 @@ class ServerListener:
 
     def close_connection(self, reason="Disconnected"):
         """Disconnect the client and clean up resources."""
-        print(f"Disconnecting client: {reason}")
+        print(f"ERORR > connection lost: {reason}")
         try:
             if self.client_socket:
                 self.client_socket.close()  # Close the socket
