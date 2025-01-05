@@ -138,6 +138,7 @@ class ServerListener:
         if self.is_reconnecting:
             print("Client reconnected, resetting reconnection attempts.")
             self.is_reconnecting = False
+            self.last_pong_received = time.time()  # Update pong timestamp
             self.ping_active = True  # Ensure pinging is active
 
     def route_server_message(self, message):
@@ -383,8 +384,7 @@ class ServerListener:
                 self.client_socket = socket.socket()
                 self.client_socket.connect((self.server, self.port))  # Replace with your server address
                 print("Reconnection successful.")
-                self.is_reconnecting = False
-                self.ping_active = True  # Start pinging
+                self.reset_reconnection_timer()  # Reset reconnection attempts
                 self.start_pinging()  # Resume pinging
                 self.listen_to_server()  # Resume listening
                 return
