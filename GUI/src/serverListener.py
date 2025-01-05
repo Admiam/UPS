@@ -80,6 +80,11 @@ class ServerListener:
                 self.handle_internet_reconnection()
                 return
 
+    def start_pinging(self):
+        """Start the ping process."""
+        self.ping_thread = threading.Thread(target=self.ping, daemon=True)
+        self.ping_thread.start()
+
     def cleanup(self):
         """Handle cleanup when the window is closed."""
         self.ping_active = False
@@ -342,21 +347,38 @@ class ServerListener:
 
         self.is_reconnecting = True
         self.ping_active = False  # Stop pinging
-        self.close_connection("Connection lost")  # Close the current connection
-        self.show_reconnecting_screen()  # Show reconnecting message
+        self.game_instance.number_lable.config(text=f"Reconnection")
 
-        for attempt in range(self.reconnection_attempts):
+        self.close_connection("Connection lost")  # Close the current connection
+        # self.show_reconnecting_screen()  # Show reconnecting message
+
+        # for attempt in range(self.reconnection_attempts):
+        #     try:
+        #         print(f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
+        #         self.client_socket.connect((self.server, self.port))  # Replace with server IP and port
+        #         self.game_instance.number_lable.config(text=f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
+        #         print("Reconnected to server.")
+        #         self.ping_active = True
+        #         threading.Thread(target=self.ping, daemon=True).start()
+        #         return
+        #     except Exception as e:
+        #         print(f"Reconnection failed: {e}")
+        #         time.sleep(1)  # Wait 1 second before retrying
+
+        for attempt in range(1, self.reconnection_attempts + 1):
             try:
-                print(f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
-                self.client_socket.connect((self.server, self.port))  # Replace with server IP and port
-                self.game_instance.number_label = tk.Label(self.game_instance, text=f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}", font=self.game_instance.big_font)
-                print("Reconnected to server.")
-                self.ping_active = True
-                threading.Thread(target=self.ping, daemon=True).start()
+                time.sleep(1)  # Wait before attempting to reconnect
+                self.client_socket.close()
+                self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.client_socket.connect((self.server, self.port))  # Replace with your server address
+                print("Reconnection successful.")
+                self.is_reconnecting = False
+                self.start_pinging()  # Resume pinging
+                self.listen_to_server()  # Resume listening
                 return
             except Exception as e:
-                print(f"Reconnection failed: {e}")
-                time.sleep(1)  # Wait 1 second before retrying
+                print(f"Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
+                self.game_instance.number_lable.config(text=f"Reconnection attempt {attempt}/{self.reconnection_attempts}")
 
         print("Failed to reconnect. Returning to login screen.")
         self.disconnect_client()
