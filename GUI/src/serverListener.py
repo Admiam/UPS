@@ -337,7 +337,7 @@ class ServerListener:
     def handle_internet_reconnection(self):
         """Handle reconnection attempts when the connection is lost."""
         self.ping_active = False  # Stop pinging
-        self.disconnect_client("Connection lost")  # Close the current connection
+        self.close_connection("Connection lost")  # Close the current connection
         self.show_reconnecting_screen()  # Show reconnecting message
 
         for attempt in range(self.reconnection_attempts):
@@ -358,3 +358,16 @@ class ServerListener:
     def show_reconnecting_screen(self):
         """Display a reconnecting message to the user."""
         messagebox.showinfo("Reconnecting", "Attempting to reconnect... Please wait.")
+
+    def close_connection(self, reason="Disconnected"):
+        """Disconnect the client and clean up resources."""
+        print(f"Disconnecting client: {reason}")
+        try:
+            if self.client_socket:
+                self.client_socket.close()  # Close the socket
+                self.client_socket = None  # Clear the socket reference
+        except Exception as e:
+            print(f"Error closing socket: {e}")
+
+        # Redirect to the login screen
+        self.update_gui_safe(self.show_login_window)

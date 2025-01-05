@@ -239,7 +239,7 @@ void GameServer::start_reconnection_timer(const std::string &group_id, const std
     }
 
     // Wait for the reconnection window (e.g., 10 seconds)
-    std::this_thread::sleep_for(std::chrono::seconds(5));
+    std::this_thread::sleep_for(std::chrono::seconds(30));
 
     {
         std::lock_guard<std::mutex> lock(game_mutex);
