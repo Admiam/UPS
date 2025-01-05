@@ -707,7 +707,7 @@ void GameServer::check_for_timeouts()
     for (auto it = player_last_ping.begin(); it != player_last_ping.end();)
     {
         auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
-        if (elapsed_time > 10)
+        if (elapsed_time > 30)
         { // Timeout of 10 seconds
             std::cout << "Player " << it->first << " has timed out.\n";
             disconnect_player_due_to_timeout(it->first);

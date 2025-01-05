@@ -49,6 +49,12 @@ class ServerListener:
 
         # Handle window close
         self.waiting_screen.protocol("WM_DELETE_WINDOW", self.cleanup)
+
+    def start_pinging(self):
+        """Start the ping process."""
+        self.ping_thread = threading.Thread(target=self.ping, daemon=True)
+        self.ping_thread.start()
+
     def ping(self):
         """Send periodic pings to the server."""
         # while self.ping_active:
@@ -79,11 +85,6 @@ class ServerListener:
                 print(f"Ping error: {e}")
                 self.handle_internet_reconnection()
                 return
-
-    def start_pinging(self):
-        """Start the ping process."""
-        self.ping_thread = threading.Thread(target=self.ping, daemon=True)
-        self.ping_thread.start()
 
     def cleanup(self):
         """Handle cleanup when the window is closed."""
@@ -374,12 +375,12 @@ class ServerListener:
                 self.client_socket.connect((self.server, self.port))  # Replace with your server address
                 print("Reconnection successful.")
                 self.is_reconnecting = False
-                self.start_pinging()  # Resume pinging
                 self.ping_active = True  # Start pinging
+                self.start_pinging()  # Resume pinging
                 self.listen_to_server()  # Resume listening
                 return
             except Exception as e:
-                print(f"Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
+                print(f"ERROR > Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
                 self.game_instance.number_label.config(text=f"{attempt}/{self.reconnection_attempts}")
 
         print("Failed to reconnect. Returning to login screen.")
