@@ -69,16 +69,25 @@ void TCPServer::setupSocket()
 void TCPServer::run()
 {
     fd_set tests; // Temporary file descriptor set for select()
+    struct timeval timeout; // Timeout for select()
     auto last_check = std::chrono::steady_clock::now();
+    bool running = true; // Server loop flag
 
-    for (;;)
+    while (running)
     {
         tests = client_socks; // Copy the client sockets set (select modifies it)
+
+        timeout.tv_sec = 1;  // Check for activity every 1 second
+        timeout.tv_usec = 0; // No microseconds
 
         // Wait for activity on any socket (blocking)
         int activity = select(FD_SETSIZE, &tests, nullptr, nullptr, nullptr);
         if (activity < 0)
         {
+            if (errno == EINTR)
+            {
+                continue; // Interrupted by a signal, continue
+            }
             std::cerr << "Select error\n";
             break;
         }
@@ -90,13 +99,25 @@ void TCPServer::run()
             {
                 if (fd == server_socket)
                 {
-                    // New client connection request on the server socket
-                    handleNewConnection();
+                    try
+                    {
+                        handleNewConnection();
+                    }
+                    catch (const std::exception &e)
+                    {
+                        std::cerr << "Error handling new connection: " << e.what() << "\n";
+                    }
                 }
                 else
                 {
-                    // Data is available on a client socket
-                    handleClientData(fd);
+                    try
+                    {
+                        handleClientData(fd);
+                    }
+                    catch (const std::exception &e)
+                    {
+                        std::cerr << "Error handling client data: " << e.what() << "\n";
+                    }
                 }
             }
         }
@@ -104,10 +125,18 @@ void TCPServer::run()
         auto now = std::chrono::steady_clock::now();
         if (std::chrono::duration_cast<std::chrono::seconds>(now - last_check).count() >= 5)
         {
-            game_server.check_for_timeouts();
+            try
+            {
+                game_server.check_for_timeouts();
+            }
+            catch (const std::exception &e)
+            {
+                std::cerr << "Error during timeout check: " << e.what() << "\n";
+            }
             last_check = now;
         }
     }
+    cleanup();
 }
 
 // Accept and add a new client to the client sockets set
@@ -271,6 +300,42 @@ std::vector<std::string> TCPServer::split(const std::string &s, char delimiter)
         tokens.push_back(token);
     }
     return tokens;
+}
+
+void TCPServer::cleanup()
+{
+    std::cout << "Cleaning up server resources...\n";
+
+    // Close all active client sockets
+    for (int fd = 0; fd < FD_SETSIZE; ++fd)
+    {
+        if (FD_ISSET(fd, &client_socks)) // Check if this socket is active
+        {
+            close(fd);                 // Close the socket
+            FD_CLR(fd, &client_socks); // Remove from the file descriptor set
+            std::cout << "Closed client socket: " << fd << "\n";
+        }
+    }
+
+    // Close the server socket
+    if (server_socket != -1)
+    {
+        close(server_socket);
+        server_socket = -1;
+        std::cout << "Closed server socket.\n";
+    }
+
+    // Clear any remaining resources in the game server
+    try
+    {
+        game_server.cleanup(); // Call cleanup on the game server if it has a similar method
+    }
+    catch (const std::exception &e)
+    {
+        std::cerr << "Error during game server cleanup: " << e.what() << "\n";
+    }
+
+    std::cout << "Server cleanup completed. Exiting...\n";
 }
 
 int main()

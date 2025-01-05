@@ -34,5 +34,6 @@ private:
     void handleClientDisconnection(int fd);
     std::string get_player_id_from_socket(int fd);
     std::vector<std::string> split(const std::string &s, char delimiter);
+    void cleanup();
 };
 #endif

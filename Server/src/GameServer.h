@@ -90,6 +90,8 @@ public:
     void handle_return_to_lobby(const std::string &player_id);
     void update_ping(const std::string &player_id);
     void check_for_timeouts();
+    void handle_internet_disconnect(const std::string &player_id);
+    void cleanup();
 
 private: 
     std::unordered_map<std::string, Group> groups;

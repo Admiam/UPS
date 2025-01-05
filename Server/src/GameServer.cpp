@@ -231,6 +231,34 @@ void GameServer::handle_disconnect(const std::string &player_id)
     player_directory.erase(player_id); // Remove player from directory
 }
 
+void GameServer::handle_internet_disconnect(const std::string &player_id)
+{
+    std::string group_id = get_player_group(player_id);
+    if (!group_id.empty())
+    {
+        Group &group = groups[group_id];
+
+        // Notify opponent
+        for (const auto &player : group.players)
+        {
+            if (player.player_id != player_id)
+            {
+                std::string message = "RPS|opponent_disconnected;";
+                int fd = get_socket_fd_for_player(player.player_id);
+                send(fd, message.c_str(), message.size(), 0);
+                std::cout << "Notified " << player.player_id << " about disconnection of " << player_id << ".\n";
+            }
+        }
+
+        // Remove disconnected player
+        group.remove_player(player_id);
+        if (group.players.empty())
+        {
+            groups.erase(group_id); // Remove group if it's now empty
+        }
+    }
+}
+
 void GameServer::start_reconnection_timer(const std::string &group_id, const std::string &player_id)
 {
     {
@@ -706,12 +734,14 @@ void GameServer::check_for_timeouts()
     auto now = std::chrono::steady_clock::now();
     for (auto it = player_last_ping.begin(); it != player_last_ping.end();)
     {
-        auto elapsed_time = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
-        if (elapsed_time > 30)
-        { // Timeout of 10 seconds
-            std::cout << "Player " << it->first << " has timed out.\n";
-            disconnect_player_due_to_timeout(it->first);
-            it = player_last_ping.erase(it);
+        const std::string &player_id = it->first;
+        auto time_since_last_ping = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
+
+        if (time_since_last_ping > 30)
+        {
+            std::cout << "Player " << player_id << " timed out.\n";
+            handle_internet_disconnect(player_id);
+            it = player_last_ping.erase(it); // Remove player from ping tracking
         }
         else
         {
@@ -725,4 +755,14 @@ void GameServer::disconnect_player_due_to_timeout(const std::string &player_id)
 {
     std::cout << "Disconnecting player due to timeout: " << player_id << "\n";
     handle_disconnect(player_id); // Existing method for disconnection
+}
+
+void GameServer::cleanup()
+{
+    std::lock_guard<std::mutex> lock(game_mutex); // Ensure thread safety
+    groups.clear();                               // Clear all game groups
+    player_queue = {};                            // Clear the player queue
+    socket_to_player_id.clear();                  // Clear socket-to-player mappings
+    disconnected_players.clear();                 // Clear disconnected players
+    std::cout << "Game server resources cleaned up.\n";
 }
