@@ -114,6 +114,8 @@ class ServerListener:
                         if message == "RPS|pong":
                             self.last_pong_received = time.time()  # Update pong timestamp
                             print("Received valid pong from server.")
+                            self.reset_reconnection_timer()  # Reset reconnection attempts
+
                         else:
                             print(f"Valid message: {message}")
                             self.route_server_message(message[4:])
@@ -130,6 +132,13 @@ class ServerListener:
                 print(f"Unexpected error: {e}")
                 self.disconnect_client("Unexpected error occurred")
                 break
+
+    def reset_reconnection_timer(self):
+        """Reset the reconnection attempts and continue normal operation."""
+        if self.is_reconnecting:
+            print("Client reconnected, resetting reconnection attempts.")
+            self.is_reconnecting = False
+            self.ping_active = True  # Ensure pinging is active
 
     def route_server_message(self, message):
         """Route the server message to the appropriate handler."""
