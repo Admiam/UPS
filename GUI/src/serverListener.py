@@ -66,7 +66,7 @@ class ServerListener:
         #         break
         while self.ping_active:
             try:
-                if time.time() - self.last_pong_received > 10:  # Check for timeout
+                if time.time() - self.last_pong_received > 3:  # Check for timeout
                     print("No pong received within timeout period.")
                     self.handle_internet_reconnection()
                     return
@@ -375,11 +375,12 @@ class ServerListener:
                 print("Reconnection successful.")
                 self.is_reconnecting = False
                 self.start_pinging()  # Resume pinging
+                self.ping_active = True  # Start pinging
                 self.listen_to_server()  # Resume listening
                 return
             except Exception as e:
                 print(f"Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
-                self.game_instance.number_label.config(text=f"Reconnection attempt {attempt}/{self.reconnection_attempts}")
+                self.game_instance.number_label.config(text=f"{attempt}/{self.reconnection_attempts}")
 
         print("Failed to reconnect. Returning to login screen.")
         self.disconnect_client()
