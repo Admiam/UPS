@@ -368,8 +368,9 @@ class ServerListener:
         for attempt in range(1, self.reconnection_attempts + 1):
             try:
                 time.sleep(1)  # Wait before attempting to reconnect
-                self.client_socket.close()
-                self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                # self.client_socket.close()
+                self.close_connection("Trying to connect")  # Close the current connection
+                self.client_socket = socket.socket()
                 self.client_socket.connect((self.server, self.port))  # Replace with your server address
                 print("Reconnection successful.")
                 self.is_reconnecting = False
