@@ -256,7 +256,7 @@ void GameServer::handle_internet_disconnect(const std::string &player_id)
         // {
         //     groups.erase(group_id); // Remove group if it's now empty
         // }
-
+        // 
         // Mark the player as disconnected and start a reconnection timer
         {
             std::lock_guard<std::mutex> lock(game_mutex);
@@ -722,7 +722,14 @@ void GameServer::print_disconnected_players() const
 // Update the last ping time for a player
 void GameServer::update_ping(const std::string &player_id)
 {
-    std::lock_guard<std::mutex> lock(game_mutex);
+    auto it = disconnected_players.find(player_id);
+    if (it != disconnected_players.end())
+    {
+        // Clear reconnection state
+        it->second.is_reconnecting = false;
+        disconnected_players.erase(it); // Remove from disconnected list
+    }
+    // Update the last ping time
     player_last_ping[player_id] = std::chrono::steady_clock::now();
 }
 
@@ -730,7 +737,6 @@ void GameServer::update_ping(const std::string &player_id)
 void GameServer::check_for_timeouts()
 {
     std::lock_guard<std::mutex> lock(game_mutex);
-
     auto now = std::chrono::steady_clock::now();
     for (auto it = player_last_ping.begin(); it != player_last_ping.end();)
     {
@@ -772,4 +778,26 @@ bool GameServer::is_player_reconnecting(const std::string &player_id) const
     // std::lock_guard<std::mutex> lock(game_mutex); // Ensure thread safety
     auto it = disconnected_players.find(player_id);
     return it != disconnected_players.end() && it->second.is_reconnecting;
+}
+
+void GameServer::notify_opponent_reconnected(const std::string &player_id)
+{
+    std::string group_id = get_player_group(player_id);
+    if (group_id.empty())
+    {
+        std::cerr << "Player " << player_id << " is not part of any group.\n";
+        return;
+    }
+
+    Group &group = groups[group_id];
+    for (const auto &player : group.players)
+    {
+        if (player.player_id != player_id)
+        {
+            std::string reconnect_message = "RPS|opponent_reconnected;";
+            int fd = get_socket_fd_for_player(player.player_id);
+            send(fd, reconnect_message.c_str(), reconnect_message.size(), 0);
+            std::cout << "Notified " << player.player_id << " about reconnection of " << player_id << ".\n";
+        }
+    }
 }

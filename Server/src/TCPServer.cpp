@@ -192,6 +192,7 @@ void TCPServer::handleClientData(int fd)
                 if (!player_id.empty() && game_server.is_player_reconnecting(player_id))
                 {
                     game_server.handle_reconnection(player_id, fd);
+                    game_server.notify_opponent_reconnected(player_id);
                 }
             }
             else if (parts.size() > 1 && parts[1] == "login")

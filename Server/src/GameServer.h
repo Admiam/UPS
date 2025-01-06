@@ -94,6 +94,7 @@ public:
     void cleanup();
     bool is_player_reconnecting(const std::string &player_id) const;
     void handle_reconnection(const std::string &player_id, int socket_fd);
+    void notify_opponent_reconnected(const std::string &player_id);
 
 private: 
     std::unordered_map<std::string, Group> groups;

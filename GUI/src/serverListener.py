@@ -155,9 +155,9 @@ class ServerListener:
             self.handle_score_update(message)
         elif message.startswith("result|"):
             self.handle_round_result(message)
-        elif message.startswith("opponent_disconnected"):
+        elif message.startswith("RPS|opponent_disconnected"):
             self.handle_opponent_disconnected()
-        elif message.startswith("opponent_reconnected"):
+        elif message.startswith("RPS|opponent_reconnected"):
             self.handle_opponent_reconnected()
         elif message.startswith("return_to_waiting"):
             self.handle_return_to_waiting()
