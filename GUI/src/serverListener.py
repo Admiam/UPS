@@ -110,10 +110,10 @@ class ServerListener:
                 while ";" in buffer:  # Process messages
                     message, buffer = buffer.split(";", 1)
                     if message.startswith("RPS|"):
-                        print(f"Valid message: {message}")
+                        # print(f"Valid message: {message}")
                         if message == "RPS|pong":
                             self.last_pong_received = time.time()  # Update pong timestamp
-                            print("Received valid pong from server.")
+                            print("SERVER > ", message)
                             self.reset_reconnection_timer()  # Reset reconnection attempts
 
                         else:

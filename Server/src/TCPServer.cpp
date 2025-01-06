@@ -123,7 +123,7 @@ void TCPServer::run()
         }
         // Periodically check for timeouts
         auto now = std::chrono::steady_clock::now();
-        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_check).count() >= 5)
+        if (std::chrono::duration_cast<std::chrono::seconds>(now - last_check).count() >= 3)
         {
             try
             {
@@ -165,7 +165,7 @@ void TCPServer::handleClientData(int fd)
     int a2read = 0;
     if (ioctl(fd, FIONREAD, &a2read) < 0)
     {
-        std::cerr << "ioctl failed on fd " << fd << ": " << strerror(errno) << "\n";
+        std::cerr << "ERROR > ioctl failed on fd " << fd << ": " << strerror(errno) << "\n";
         handleClientDisconnection(fd);
         return;
     }
@@ -178,22 +178,30 @@ void TCPServer::handleClientData(int fd)
         if (bytes_received > 0)
         {
             std::string message(buffer.begin(), buffer.begin() + bytes_received);
-            std::cout << "Message received: " << message << std::endl;
+            std::cout << "CLIENT > " << message << std::endl;
             std::vector<std::string> parts = split(message, '|');
+
+
             if (message == "RPS|ping")
             {
                 std::string player_id = get_player_id_from_socket(fd);
+                if (player_id.empty())
+                {
+                    std::cerr << "ERROR > Unknown player sending ping from socket " << fd << ".\n";
+                    return;
+                }
                 game_server.update_ping(player_id);
                 // Respond with a pong
                 std::string pong_message = "RPS|pong;";
-                std::cout << "send: " << pong_message << "\n";
+                // std::cout << "send: " << pong_message << "\n";
 
                 send(fd, pong_message.c_str(), pong_message.size(), 0);
-                if (!player_id.empty() && game_server.is_player_reconnecting(player_id))
+                if (game_server.is_player_reconnecting(player_id))
                 {
                     game_server.handle_reconnection(player_id, fd);
                     game_server.notify_opponent_reconnected(player_id);
                 }
+                game_server.check_for_inactive_players();
             }
             else if (parts.size() > 1 && parts[1] == "login")
                 {

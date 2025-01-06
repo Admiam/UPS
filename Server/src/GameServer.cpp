@@ -8,10 +8,10 @@
 
 void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd)
 {
-    std::cout << "kokot1\n";
+    // std::cout << "kokot1\n";
     {
         std::lock_guard<std::mutex> lock(game_mutex);
-        std::cout << "kokot2\n";
+        // std::cout << "kokot2\n";
 
         auto it = disconnected_players.find(player_id);
 
@@ -77,7 +77,7 @@ void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd
                     int other_fd = player.socket_fd;
                     std::string reconnect_message = "RPS|reconnect|" + player_id + "|game_resume" + ";";
                     send(other_fd, reconnect_message.c_str(), reconnect_message.size(), 0);
-                    std::cout << "Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
+                    std::cout << "RECONNECT > Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
                 }
             }
 
@@ -91,15 +91,15 @@ void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd
 
     socket_to_player_id[socket_fd] = player_id; // Update mapping
 
-    std::cout << "-----------Add player to queue after----------- \n ";
+    std::cout << "DEBUG > -----------Add player to queue after----------- \n ";
     print_disconnected_players();
     print_groups();
     print_player_queue();
-    std::cout << "-----------Add player to queue after----------- \n ";
+    std::cout << "DEBUG > -----------Add player to queue after----------- \n ";
 
     // return; // Exit without adding to the queue
 
-    std::cout << "Added player " << player_id << " to the queue\n";
+    std::cout << "LOBBY > Added player " << player_id << " to the queue\n";
     attempt_to_form_group();
 }
 
@@ -112,13 +112,13 @@ void GameServer::attempt_to_form_group()
 
     if (!lock.owns_lock())
     {
-        std::cerr << "Failed to acquire lock on game_mutex.\n";
+        std::cerr << "ERROR > Failed to acquire lock on game_mutex.\n";
         return; // Exit the function if the lock is already held
     }
 
     if (player_queue.size() < 2)
     {
-        std::cout << "Not enough players to form a group.\n";
+        std::cout << "LOBBY > Not enough players to form a group.\n";
         return;
     }
 
@@ -137,8 +137,8 @@ void GameServer::attempt_to_form_group()
     std::string message_to_player1 = "RPS|" + group_id + "|" + player2.first + ";";
     std::string message_to_player2 = "RPS|" + group_id + "|" + player1.first + ";";
 
-    std::cout << "Send message: " << message_to_player1 << "\n";
-    std::cout << "Send message: " << message_to_player2 << "\n";
+    std::cout << "SERVER SENT > " << message_to_player1 << "\n";
+    std::cout << "SERVER SENT > " << message_to_player2 << "\n";
 
     // player_directory[player1.first] = &groups[group_id].players.back();
     // player_directory[player2.first] = &groups[group_id].players.back();
@@ -166,14 +166,14 @@ void GameServer::handle_disconnect(const std::string &player_id)
     auto player_it = player_directory.find(player_id);
     if (player_it == player_directory.end())
     {
-        std::cout << "Player: " << player_id << " not fount \n";
+        std::cout << "ERROR > player: " << player_id << " not fount \n";
         return; // Player not found
     }
 
     Player *player = player_it->second;
     player->is_connected = false;
     socket_to_player_id.erase(player->socket_fd); // Remove the socket mapping
-    std::cout << "Player " << player_id << " disconnected\n";
+    std::cout << "DISCONNECT > player " << player_id << " disconnected\n";
 
     // Find the group containing this player
     // for (auto &[group_id, group] : groups)
@@ -202,27 +202,27 @@ void GameServer::handle_disconnect(const std::string &player_id)
         {
             group.remove_player(player_id);
             disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
-            std::cout << "-----------Handle disconnect player before-----------\n";
+            std::cout << "DEBUG > -----------Handle disconnect player before-----------\n";
             print_disconnected_players();
             print_groups();
             print_player_queue();
-            std::cout << "-----------Handle disconnect player before-----------\n";
+            std::cout << "DEBUG > -----------Handle disconnect player before-----------\n";
 
             if (group.players.empty())
             {
                 groups.erase(group_id);
-                std::cout << "Group " << group_id << " removed as all players are disconnected.\n";
+                std::cout << "DISCONNECT > Group " << group_id << " removed as all players are disconnected.\n";
             }
             else
             {
-                std::cout << "Starting reconnection timer for player " << player_id << " in group " << group_id << "\n";
+                std::cout << "RECONNECT > Starting reconnection timer for player " << player_id << " in group " << group_id << "\n";
                 std::thread(&GameServer::start_reconnection_timer, this, group_id, player_id).detach();
             }
-            std::cout << "----------Handle disconnect player after----------\n";
+            std::cout << "DEBUG > ----------Handle disconnect player after----------\n";
             print_disconnected_players();
             print_groups();
             print_player_queue();
-            std::cout << "----------Handle disconnect player after----------\n";
+            std::cout << "DEBUG > ----------Handle disconnect player after----------\n";
 
             break;
         }
@@ -234,77 +234,50 @@ void GameServer::handle_disconnect(const std::string &player_id)
 void GameServer::handle_internet_disconnect(const std::string &player_id)
 {
     std::string group_id = get_player_group(player_id);
-    if (!group_id.empty())
+    if (group_id.empty())
     {
-        Group &group = groups[group_id];
-
-        // Notify opponent
-        for (const auto &player : group.players)
-        {
-            if (player.player_id != player_id)
-            {
-                std::string message = "RPS|opponent_disconnected;";
-                int fd = get_socket_fd_for_player(player.player_id);
-                send(fd, message.c_str(), message.size(), 0);
-                std::cout << "Notified " << player.player_id << " about disconnection of " << player_id << ".\n";
-            }
-        }
-
-        // // Remove disconnected player
-        // group.remove_player(player_id);
-        // if (group.players.empty())
-        // {
-        //     groups.erase(group_id); // Remove group if it's now empty
-        // }
-        // 
-        // Mark the player as disconnected and start a reconnection timer
-        {
-            std::lock_guard<std::mutex> lock(game_mutex);
-            disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
-        }
-
-        // Start a timer for reconnection
-        std::thread(&GameServer::start_reconnection_timer, this, group_id, player_id).detach();
+        std::cerr << "ERROR > Player " << player_id << " is not part of any group.\n";
+        return;
     }
+    std::cout << "KOKOT1\n";
+    // Spusťte nový thread pro oznámení soupeřům
+    std::thread([this, player_id, group_id]()
+    { 
+        notify_opponent_disconnected(player_id, group_id); 
+    }).detach();
+
+    std::cout << "KOKOT2\n";
+
+    // Přidejte hráče do seznamu odpojených a začněte čekat na znovupřipojení
+    // {
+    //     std::lock_guard<std::mutex> lock(game_mutex);
+    disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
+    // }
+    std::cout << "KOKOT3\n";
+
+    // Spusťte timer pro znovupřipojení
+    std::thread(&GameServer::start_reconnection_timer, this, group_id, player_id).detach();
+    std::cout << "KOKOT4\n";
 }
 
 void GameServer::start_reconnection_timer(const std::string &group_id, const std::string &player_id)
 {
-    const int timeout_seconds = 30; // Allow 30 seconds for reconnection
-    std::this_thread::sleep_for(std::chrono::seconds(timeout_seconds));
+    std::cout << "DEBUG > start_reconnection_timer started for player " << player_id << " in group " << group_id << "\n";
+
+    {
+        std::lock_guard<std::mutex> lock(game_mutex);
+        disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
+    }
+
+    std::this_thread::sleep_for(std::chrono::seconds(30)); // Example timeout duration
 
     std::lock_guard<std::mutex> lock(game_mutex);
-
     auto it = disconnected_players.find(player_id);
     if (it != disconnected_players.end() && it->second.is_reconnecting)
     {
-        std::cout << "Reconnection timeout for player " << player_id << " in group " << group_id << ".\n";
-
-        auto group_it = groups.find(group_id);
-        if (group_it != groups.end())
-        {
-            Group &group = group_it->second;
-
-            // Notify the remaining player about returning to the lobby
-            for (const auto &player : group.players)
-            {
-                if (player.player_id != player_id)
-                {
-                    std::string message = "RPS|return_to_waiting;";
-                    int fd = get_socket_fd_for_player(player.player_id);
-                    send(fd, message.c_str(), message.size(), 0);
-                    std::cout << "Notified " << player.player_id << " to return to waiting screen.\n";
-                }
-            }
-
-            // Remove the disconnected player and clean up
-            group.remove_player(player_id);
-            if (group.players.empty())
-            {
-                groups.erase(group_id); // Remove the group if empty
-            }
-            disconnected_players.erase(it); // Remove from disconnected list
-        }
+        std::cout << "DEBUG > Reconnection timeout for player " << player_id << "\n";
+        handle_reconnection_timeout(group_id, player_id);
+        disconnected_players.erase(it);
     }
 }
 
@@ -315,7 +288,7 @@ void GameServer::handle_reconnection_timeout(const std::string &group_id, const 
     auto group_it = groups.find(group_id);
     if (group_it == groups.end())
     {
-        std::cout << "Group not found\n";
+        std::cout << "ERROR > Group not found\n";
         return;
     }
 
@@ -328,11 +301,11 @@ void GameServer::handle_reconnection_timeout(const std::string &group_id, const 
     if (it != group.players.end() && !it->is_connected)
     {
 
-        std::cout << "------------Handle reconnection timeout------------\n";
+        std::cout << "DEBUG > ------------Handle reconnection timeout------------\n";
         print_disconnected_players();
         print_groups();
         print_player_queue();
-        std::cout << "------------Handle reconnection timeout------------\n";
+        std::cout << "DEBUG > ------------Handle reconnection timeout------------\n";
 
         handle_return_to_lobby(player_id);
 
@@ -399,14 +372,14 @@ void GameServer::handle_reconnection(const std::string &player_id, int socket_fd
     auto group_it = groups.find(group_id);
     if (group_it == groups.end())
     {
-        std::cerr << "Reconnection failed: Group " << group_id << " not found.\n";
+        std::cerr << "ERROR > Reconnection failed: Group " << group_id << " not found.\n";
         return;
     }
 
     // Re-add player to their original group
     groups[group_id].add_player(Player(player_id, socket_fd));
     socket_to_player_id[socket_fd] = player_id; // Update mapping
-    std::cout << "Reconnected player " << player_id << " to group " << group_id << "\n";
+    std::cout << "RECONNECT > Reconnected player " << player_id << " to group " << group_id << "\n";
 
     // Get the opponent player and current scores
     auto &group = groups[group_id];
@@ -436,7 +409,7 @@ void GameServer::handle_reconnection(const std::string &player_id, int socket_fd
                                  "|" + group_id + ";";
 
     send(socket_fd, resume_message.c_str(), resume_message.size(), 0);
-    std::cout << "Sent resume message to " << player_id << ": " << resume_message << "\n";
+    std::cout << "RECONNECT > Sent resume message to " << player_id << ": " << resume_message << "\n";
 
     // Notify the opponent that the player has reconnected
     for (const auto &player : group.players)
@@ -446,7 +419,7 @@ void GameServer::handle_reconnection(const std::string &player_id, int socket_fd
             int other_fd = player.socket_fd;
             std::string reconnect_message = "PRS|reconnect|" + player_id + "|game_resume;";
             send(other_fd, reconnect_message.c_str(), reconnect_message.size(), 0);
-            std::cout << "Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
+            std::cout << "RECONNECT > Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
         }
     }
 
@@ -586,7 +559,7 @@ void GameServer::notify_players_to_start(const Group &group)
         int socket_fd = get_socket_fd_for_player(player.player_id);
         std::string start_message = "RPS|start;";
         send(socket_fd, start_message.c_str(), start_message.size(), 0);
-        std::cout << "Sent start message to " << player.player_id << "\n";
+        std::cout << "GAME > Sent start message to " << player.player_id << "\n";
     }
 }
 
@@ -597,14 +570,14 @@ void GameServer::mark_player_ready(const std::string &group_id, const std::strin
     auto group_it = groups.find(group_id);
     if (group_it == groups.end())
     {
-        std::cerr << "Group " << group_id << " not found.\n";
+        std::cerr << "ERROR > Group " << group_id << " not found.\n";
         return;
     }
 
     Group &group = group_it->second;
     group.ready_state[player_id] = true; // Mark the player as ready
 
-    std::cout << "Player " << player_id << " is ready in group " << group_id << "\n";
+    std::cout << "GAME > Player " << player_id << " is ready in group " << group_id << "\n";
 
     // Check if all players in the group are ready
     if (std::all_of(group.players.begin(), group.players.end(),
@@ -626,23 +599,23 @@ void GameServer::handle_return_to_lobby(const std::string &player_id)
         if (group.contains_player(player_id))
         {
             group.remove_player(player_id);
-            std::cout << "Removed player " << player_id << " from group " << group_id << ".\n";
+            std::cout << "DISCONNECT > Removed player " << player_id << " from group " << group_id << ".\n";
 
             // If the group is empty, remove it
             if (group.players.empty())
             {
                 groups.erase(group_id);
-                std::cout << "Group " << group_id << " has been removed as it is empty.\n";
+                std::cout << "DISCONNECT > Group " << group_id << " has been removed as it is empty.\n";
             }
             break;
         }
     }
 
-    std::cout << "------------Handle return to lobby------------\n";
+    std::cout << "DEBUG > ------------Handle return to lobby------------\n";
     print_disconnected_players();
     print_groups();
     print_player_queue();
-    std::cout << "------------Handle return to lobby------------\n";
+    std::cout << "DEBUG > ------------Handle return to lobby------------\n";
 
     // std::cout << "kokot0\n";
     // Find the socket_fd associated with player_id
@@ -652,11 +625,11 @@ void GameServer::handle_return_to_lobby(const std::string &player_id)
     {
         // Add the player back to the queue
         add_player_to_queue(player_id, socket_fd);
-        std::cout << "Player " << player_id << " has been added back to the lobby.\n";
+        std::cout << "LOBBY > Player " << player_id << " has been added back to the lobby.\n";
     }
     else
     {
-        std::cerr << "Error: Could not find socket_fd for player_id " << player_id << "\n";
+        std::cerr << "ERROR > Could not find socket_fd for player_id " << player_id << "\n";
     }
     
     
@@ -684,57 +657,92 @@ std::string GameServer::normalize_player_id(const std::string &player_id) const
 
 void GameServer::print_player_queue() const
 {
-    std::cout << "Players in the queue:\n";
+    std::cout << "\n========== Player Queue ==========\n";
     std::queue<std::pair<std::string, int>> temp_queue = player_queue; // Copy the queue for iteration
 
-    while (!temp_queue.empty())
+    if (temp_queue.empty())
     {
-        auto player = temp_queue.front();
-        temp_queue.pop();
-        std::cout << "Player ID: " << player.first << ", Socket FD: " << player.second << "\n";
+        std::cout << "No players in the queue.\n";
     }
+    else
+    {
+        while (!temp_queue.empty())
+        {
+            auto player = temp_queue.front();
+            temp_queue.pop();
+            std::cout << "Player ID: " << std::setw(15) << std::left << player.first
+                      << "Socket FD: " << player.second << "\n";
+        }
+    }
+    std::cout << "===================================\n";
 }
 
 void GameServer::print_groups() const
 {
-    std::cout << "Current groups and their players:\n";
-    for (const auto &[group_id, group] : groups)
+    std::cout << "\n========== Current Groups ==========\n";
+
+    if (groups.empty())
     {
-        std::cout << "Group ID: " << group_id << "\n";
-        for (const auto &player : group.players)
+        std::cout << "No active groups.\n";
+    }
+    else
+    {
+        for (const auto &[group_id, group] : groups)
         {
-            std::cout << "  Player ID: " << player.player_id << ", Socket FD: " << player.socket_fd
-                      << ", Connected: " << (player.is_connected ? "Yes" : "No") << "\n";
+            std::cout << "Group ID: " << group_id << "\n";
+            for (const auto &player : group.players)
+            {
+                std::cout << "  Player ID: " << std::setw(15) << std::left << player.player_id
+                          << "Socket FD: " << std::setw(5) << player.socket_fd
+                          << "Connected: " << (player.is_connected ? "Yes" : "No") << "\n";
+            }
         }
     }
+
+    std::cout << "=====================================\n";
 }
 
 void GameServer::print_disconnected_players() const
 {
-    std::cout << "Disconnected players:\n";
-    for (const auto &[player_id, info] : disconnected_players)
+    std::cout << "\n========== Disconnected Players ==========\n";
+
+    if (disconnected_players.empty())
     {
-        std::cout << "Player ID: " << player_id << ", Group ID: " << info.group_id
-                  << ", Is Reconnecting: " << (info.is_reconnecting ? "Yes" : "No") << "\n";
+        std::cout << "No disconnected players.\n";
     }
+    else
+    {
+        for (const auto &[player_id, info] : disconnected_players)
+        {
+            std::cout << "Player ID: " << std::setw(15) << std::left << player_id
+                      << "Group ID: " << std::setw(10) << info.group_id
+                      << "Reconnecting: " << (info.is_reconnecting ? "Yes" : "No") << "\n";
+        }
+    }
+
+    std::cout << "==========================================\n";
 }
 
 // Update the last ping time for a player
 void GameServer::update_ping(const std::string &player_id)
 {
+    std::lock_guard<std::mutex> lock(game_mutex);
+
     auto it = disconnected_players.find(player_id);
     if (it != disconnected_players.end())
     {
         // Clear reconnection state
         it->second.is_reconnecting = false;
         disconnected_players.erase(it); // Remove from disconnected list
+        std::cout << "RECONNECT > Player " << player_id << " marked as connected.\n";
     }
     // Update the last ping time
+
     player_last_ping[player_id] = std::chrono::steady_clock::now();
 }
 
 // Check for players who haven't sent a ping recently
-void GameServer::check_for_timeouts()
+void GameServer::check_for_timeouts() 
 {
     std::lock_guard<std::mutex> lock(game_mutex);
     auto now = std::chrono::steady_clock::now();
@@ -743,11 +751,11 @@ void GameServer::check_for_timeouts()
         const std::string &player_id = it->first;
         auto time_since_last_ping = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
 
-        if (time_since_last_ping > 30)
+        if (time_since_last_ping > 3)
         {
-            std::cout << "Player " << player_id << " timed out.\n";
+            std::cout << "RECONNECT > Player " << player_id << " timed out.\n";
             handle_internet_disconnect(player_id);
-            it = player_last_ping.erase(it); // Remove player from ping tracking
+            it = player_last_ping.erase(it); //TODO neostranovat hrace pokud se pripoji
         }
         else
         {
@@ -759,7 +767,7 @@ void GameServer::check_for_timeouts()
 // Handle the disconnection of a player due to timeout
 void GameServer::disconnect_player_due_to_timeout(const std::string &player_id)
 {
-    std::cout << "Disconnecting player due to timeout: " << player_id << "\n";
+    std::cout << "DISCONNECT > Disconnecting player due to timeout: " << player_id << "\n";
     handle_disconnect(player_id); // Existing method for disconnection
 }
 
@@ -770,7 +778,7 @@ void GameServer::cleanup()
     player_queue = {};                            // Clear the player queue
     socket_to_player_id.clear();                  // Clear socket-to-player mappings
     disconnected_players.clear();                 // Clear disconnected players
-    std::cout << "Game server resources cleaned up.\n";
+    // std::cout << "Game server resources cleaned up.\n";
 }
 
 bool GameServer::is_player_reconnecting(const std::string &player_id) const
@@ -785,7 +793,7 @@ void GameServer::notify_opponent_reconnected(const std::string &player_id)
     std::string group_id = get_player_group(player_id);
     if (group_id.empty())
     {
-        std::cerr << "Player " << player_id << " is not part of any group.\n";
+        std::cerr << "ERROR > Player " << player_id << " is not part of any group.\n";
         return;
     }
 
@@ -797,7 +805,45 @@ void GameServer::notify_opponent_reconnected(const std::string &player_id)
             std::string reconnect_message = "RPS|opponent_reconnected;";
             int fd = get_socket_fd_for_player(player.player_id);
             send(fd, reconnect_message.c_str(), reconnect_message.size(), 0);
-            std::cout << "Notified " << player.player_id << " about reconnection of " << player_id << ".\n";
+            std::cout << "RECONNECT > Notified " << player.player_id << " about reconnection of " << player_id << ".\n";
+        }
+    }
+}
+
+void GameServer::notify_opponent_disconnected(const std::string &player_id, const std::string &group_id)
+{
+    Group &group = groups[group_id];
+    for (const auto &player : group.players)
+    {
+        if (player.player_id != player_id)
+        {
+            int fd = get_socket_fd_for_player(player.player_id);
+            std::string message = "RPS|opponent_disconnected;";
+            send(fd, message.c_str(), message.size(), 0);
+            std::cout << "DISCONNECT > Notified " << player.player_id << " about disconnection of " << player_id << ".\n";
+        }
+    }
+}
+
+void GameServer::check_for_inactive_players()
+{
+    std::lock_guard<std::mutex> lock(game_mutex);
+    auto now = std::chrono::steady_clock::now();
+
+    for (auto it = player_last_ping.begin(); it != player_last_ping.end();)
+    {
+        const std::string &player_id = it->first;
+        auto time_since_last_ping = std::chrono::duration_cast<std::chrono::seconds>(now - it->second).count();
+
+        if (time_since_last_ping > 3) // Define a timeout period
+        {
+            std::cout << "RECONNECT > Player " << player_id << " timed out.\n";
+            handle_internet_disconnect(player_id); // Notify and handle timeout
+            it = player_last_ping.erase(it);       // Remove the player from ping tracking
+        }
+        else
+        {
+            ++it;
         }
     }
 }
