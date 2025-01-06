@@ -92,6 +92,8 @@ public:
     void check_for_timeouts();
     void handle_internet_disconnect(const std::string &player_id);
     void cleanup();
+    bool is_player_reconnecting(const std::string &player_id) const;
+    void handle_reconnection(const std::string &player_id, int socket_fd);
 
 private: 
     std::unordered_map<std::string, Group> groups;
@@ -108,7 +110,6 @@ private:
     void handle_reconnection_timeout(const std::string &group_id, const std::string &player_id);
     int get_socket_fd_for_player(const std::string &player_id) const;
     void notify_players_to_start(const Group &group);
-    void handle_reconnection(const std::string &player_id, int socket_fd);
     void mark_player_ready(const std::string &group_id, const std::string &player_id);
     void print_to_hex(const std::string &str) const;
     std::string normalize_player_id(const std::string &player_id) const;

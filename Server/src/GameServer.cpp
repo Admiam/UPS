@@ -250,60 +250,60 @@ void GameServer::handle_internet_disconnect(const std::string &player_id)
             }
         }
 
-        // Remove disconnected player
-        group.remove_player(player_id);
-        if (group.players.empty())
+        // // Remove disconnected player
+        // group.remove_player(player_id);
+        // if (group.players.empty())
+        // {
+        //     groups.erase(group_id); // Remove group if it's now empty
+        // }
+
+        // Mark the player as disconnected and start a reconnection timer
         {
-            groups.erase(group_id); // Remove group if it's now empty
+            std::lock_guard<std::mutex> lock(game_mutex);
+            disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
         }
+
+        // Start a timer for reconnection
+        std::thread(&GameServer::start_reconnection_timer, this, group_id, player_id).detach();
     }
 }
 
 void GameServer::start_reconnection_timer(const std::string &group_id, const std::string &player_id)
 {
-    {
-        std::lock_guard<std::mutex> lock(game_mutex);
-        disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
-    }
+    const int timeout_seconds = 30; // Allow 30 seconds for reconnection
+    std::this_thread::sleep_for(std::chrono::seconds(timeout_seconds));
 
-    // Wait for the reconnection window (e.g., 10 seconds)
-    std::this_thread::sleep_for(std::chrono::seconds(30));
+    std::lock_guard<std::mutex> lock(game_mutex);
 
+    auto it = disconnected_players.find(player_id);
+    if (it != disconnected_players.end() && it->second.is_reconnecting)
     {
-        std::lock_guard<std::mutex> lock(game_mutex);
-        auto it = disconnected_players.find(player_id);
-        if (it != disconnected_players.end() && it->second.is_reconnecting)
+        std::cout << "Reconnection timeout for player " << player_id << " in group " << group_id << ".\n";
+
+        auto group_it = groups.find(group_id);
+        if (group_it != groups.end())
         {
-            std::cout << "Reconnection timeout for player " << player_id << " in group " << group_id << "\n";
+            Group &group = group_it->second;
 
-            auto group_it = groups.find(group_id);
-            // std::cout << "group1\n";
-
-            if (group_it != groups.end())
+            // Notify the remaining player about returning to the lobby
+            for (const auto &player : group.players)
             {
-                // std::cout << "group2\n";
-
-                Group &group = group_it->second;
-
-                // Notify the remaining player to return to the waiting screen
-                for (const auto &player : group.players)
+                if (player.player_id != player_id)
                 {
-                    // std::cout << "group3\n";
-
-                    if (player.player_id != player_id && player.is_connected)
-                    {
-                        // std::cout << "group4\n";
-
-                        std::string return_to_waiting_msg = "RPS|return_to_waiting;";
-                        send(player.socket_fd, return_to_waiting_msg.c_str(), return_to_waiting_msg.size(), 0);
-                        std::cout << "Notified player " << player.player_id << " to return to waiting screen\n";
-                    }
+                    std::string message = "RPS|return_to_waiting;";
+                    int fd = get_socket_fd_for_player(player.player_id);
+                    send(fd, message.c_str(), message.size(), 0);
+                    std::cout << "Notified " << player.player_id << " to return to waiting screen.\n";
                 }
             }
-            // std::cout << "group5\n";
 
-            handle_reconnection_timeout(group_id, player_id);
-            disconnected_players.erase(it);
+            // Remove the disconnected player and clean up
+            group.remove_player(player_id);
+            if (group.players.empty())
+            {
+                groups.erase(group_id); // Remove the group if empty
+            }
+            disconnected_players.erase(it); // Remove from disconnected list
         }
     }
 }
@@ -765,4 +765,11 @@ void GameServer::cleanup()
     socket_to_player_id.clear();                  // Clear socket-to-player mappings
     disconnected_players.clear();                 // Clear disconnected players
     std::cout << "Game server resources cleaned up.\n";
+}
+
+bool GameServer::is_player_reconnecting(const std::string &player_id) const
+{
+    // std::lock_guard<std::mutex> lock(game_mutex); // Ensure thread safety
+    auto it = disconnected_players.find(player_id);
+    return it != disconnected_players.end() && it->second.is_reconnecting;
 }

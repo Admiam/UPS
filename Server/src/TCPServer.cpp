@@ -189,6 +189,10 @@ void TCPServer::handleClientData(int fd)
                 std::cout << "send: " << pong_message << "\n";
 
                 send(fd, pong_message.c_str(), pong_message.size(), 0);
+                if (!player_id.empty() && game_server.is_player_reconnecting(player_id))
+                {
+                    game_server.handle_reconnection(player_id, fd);
+                }
             }
             else if (parts.size() > 1 && parts[1] == "login")
                 {
