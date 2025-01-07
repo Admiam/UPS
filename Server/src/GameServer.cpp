@@ -7,7 +7,7 @@
 
 void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd)
 {
-    // std::cout << "kokot1\n";
+    std::cout << "kokot1\n";
     {
         std::lock_guard<std::mutex> lock(game_mutex);
         // std::cout << "kokot2\n";
@@ -306,48 +306,7 @@ void GameServer::handle_reconnection_timeout(const std::string &group_id, const 
 
         handle_return_to_lobby(player_id);
 
-        // std::cout << "Reconnection timeout for player " << player_id << ". Removing from group " << group_id << ".\n";
-
-        // group.remove_player(player_id);
-        // player_directory.erase(player_id);
-        // disconnected_players.erase(player_id);
-
-        // if (group.players.empty())
-        // {
-        //     groups.erase(group_id);
-        //     std::cout << "Group " << group_id << " removed as it is now empty.\n";
-        // }
-        // else
-        // {
-        //     std::cout << "Remaining players in group. Attempting to reassign remaining players to the lobby.\n";
-        //     for (const auto &remaining_player : group.players)
-        //     {
-        //         handle_return_to_lobby(remaining_player.player_id);
-        //     }
-        // }
-
-
-        // // Remove the disconnected player from the group
-        // group.remove_player(player_id);
-        // player_directory.erase(player_id);
-        // std::cout << "Removed player " << player_id << " from group " << group_id << "\n";
-
-        // // Return the remaining player to the queue if there is one
-        // if (group.players.size() == 1)
-        // {
-        //     auto remaining_player = group.players[0];
-        //     player_queue.push(std::make_pair(remaining_player.player_id, remaining_player.socket_fd));
-        //     std::cout << "Returning player " << remaining_player.player_id << " to the queue\n";
-        // }
-
-        // // Remove the group if empty
-        // if (group.players.empty())
-        // {
-        //     groups.erase(group_id);
-        // }
-        // std::cout << "Removed \n"; 
-        // // Attempt to form a new group if there are enough players in the queue
-        // attempt_to_form_group();
+        
     }
 }
 
@@ -621,14 +580,15 @@ void GameServer::handle_return_to_lobby(const std::string &player_id)
         {
             group.remove_player(player_id);
             std::cout << "DISCONNECT > Removed player " << player_id << " from group " << group_id << ".\n";
-
+            // std::cout << "DEBUG > " << group.players.empty()
             // If the group is empty, remove it
-            if (group.players.empty())
-            {
-                groups.erase(group_id);
-                std::cout << "DISCONNECT > Group " << group_id << " has been removed as it is empty.\n";
-            }
-            break;
+            // if (group.players.empty())
+            // {
+            //     std::cout << "kokot\n";
+            //     groups.erase(group_id);
+            //     std::cout << "DISCONNECT > Group " << group_id << " has been removed as it is empty.\n";
+            // }
+            // break;
         }
     }
 
