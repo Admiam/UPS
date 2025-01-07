@@ -368,10 +368,12 @@ class ServerListener:
                 time.sleep(1)  # Wait before attempting to reconnect
                 # self.client_socket.close()
                 self.close_connection("Trying to connect")  # Close the current connection
-                # self.client_socket = socket.socket()
-                # self.client_socket.connect((self.server, self.port))  # Replace with your server address
+                self.client_socket = socket.socket()
+                self.client_socket.connect((self.server, self.port))  # Replace with your server address
                 print("Reconnection successful.")
                 self.reset_reconnection_timer()  # Reset reconnection attempts
+                message = f"RPS|reconnect|{self.player_name};"
+                self.client_socket.sendall(message.encode("utf-8"))
                 self.start_pinging()  # Resume pinging
                 self.listen_to_server()  # Resume listening
                 return

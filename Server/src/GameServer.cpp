@@ -352,76 +352,38 @@ void GameServer::handle_reconnection_timeout(const std::string &group_id, const 
     }
 }
 
-void GameServer::handle_reconnection(const std::string &player_id, int socket_fd)
+void GameServer::handle_reconnection(const std::string &player_id, int new_fd)
 {
     std::lock_guard<std::mutex> lock(game_mutex);
 
     auto it = disconnected_players.find(player_id);
     if (it == disconnected_players.end())
     {
-        std::cerr << "Reconnection failed: Player " << player_id << " not in disconnected players.\n";
+        std::cerr << "Reconnection failed: Player " << player_id << " not in disconnected list.\n";
         return;
     }
 
     std::string group_id = it->second.group_id;
-    disconnected_players.erase(it);
+    disconnected_players.erase(it); // Remove from disconnected players
 
-    // Re-add the player to their original group
+    // Update the player's socket FD and connection status
     auto group_it = groups.find(group_id);
-    if (group_it == groups.end())
+    if (group_it != groups.end())
     {
-        std::cerr << "ERROR > Reconnection failed: Group " << group_id << " not found.\n";
-        return;
-    }
+        Group &group = group_it->second;
 
-    // Re-add player to their original group
-    groups[group_id].add_player(Player(player_id, socket_fd));
-    socket_to_player_id[socket_fd] = player_id; // Update mapping
-    std::cout << "RECONNECT > Reconnected player " << player_id << " to group " << group_id << "\n";
-
-    // Get the opponent player and current scores
-    auto &group = groups[group_id];
-    std::string opponent_name;
-    int player_score = 0;
-    int opponent_score = 0;
-    int current_round = group.logic.get_current_round(); // Assuming GameLogic tracks the current round
-
-    for (const auto &player : group.players)
-    {
-        if (player.player_id != player_id)
+        for (auto &player : group.players)
         {
-            opponent_name = player.player_id;
-            opponent_score = group.logic.get_score(opponent_name); // Assuming GameLogic tracks scores
-        }
-        else
-        {
-            player_score = group.logic.get_score(player_id);
+            if (player.player_id == player_id)
+            {
+                player.socket_fd = new_fd;
+                player.is_connected = true;
+                break;
+            }
         }
     }
 
-    // Notify the reconnecting player about their opponent, scores, and that the game can resume
-    std::string resume_message = "RPS|reconnect|success|" + opponent_name +
-                                 "|" + std::to_string(player_score) +
-                                 "|" + std::to_string(opponent_score) +
-                                 "|" + std::to_string(current_round) +
-                                 "|" + group_id + ";";
-
-    send(socket_fd, resume_message.c_str(), resume_message.size(), 0);
-    std::cout << "RECONNECT > Sent resume message to " << player_id << ": " << resume_message << "\n";
-
-    // Notify the opponent that the player has reconnected
-    for (const auto &player : group.players)
-    {
-        if (player.player_id != player_id)
-        {
-            int other_fd = player.socket_fd;
-            std::string reconnect_message = "PRS|reconnect|" + player_id + "|game_resume;";
-            send(other_fd, reconnect_message.c_str(), reconnect_message.size(), 0);
-            std::cout << "RECONNECT > Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
-        }
-    }
-
-    return; // Exit without adding to the queue
+    std::cout << "Player " << player_id << " reconnected successfully.\n";
 }
 
 int GameServer::get_socket_fd_for_player(const std::string &player_id) const

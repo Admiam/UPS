@@ -278,7 +278,35 @@ void TCPServer::handleClientData(int fd)
                 std::string confirmation_msg = "RPS|lobby|success;";
                 send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
             }
+            else if (parts.size() > 1 && parts[1] == "reconnect")
+            {
+                if (parts.size() < 3)
+                {
+                    std::cerr << "Invalid 'reconnect' message format.\n";
+                    return;
+                }
+
+                std::string player_id = parts[2];
+                std::string group_id = game_server.get_player_group(player_id);
+
+                if (group_id.empty())
+                {
+                    std::cerr << "Reconnection failed: Player " << player_id << " is not part of any group.\n";
+                    return;
+                }
+
+                // Update the socket mapping for the player
+                socket_to_player_id[fd] = player_id;
+
+                // Notify the GameServer about the reconnection
+                game_server.handle_reconnection(player_id, fd);
+
+                // Respond to the client
+                std::string success_msg = "RPS|reconnect|success;";
+                send(fd, success_msg.c_str(), success_msg.size(), 0);
+                std::cout << "Reconnected player " << player_id << " with new socket FD: " << fd << "\n";
             }
+        }
         else
         {
             std::cerr << "recv failed on fd " << fd << ": " << strerror(errno) << "\n";
