@@ -264,10 +264,8 @@ void GameServer::start_reconnection_timer(const std::string &group_id, const std
 {
     std::cout << "DEBUG > start_reconnection_timer started for player " << player_id << " in group " << group_id << "\n";
 
-    {
-        std::lock_guard<std::mutex> lock(game_mutex);
-        disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
-    }
+    disconnected_players[player_id] = {group_id, true, std::chrono::steady_clock::now()};
+    
 
     std::this_thread::sleep_for(std::chrono::seconds(30)); // Example timeout duration
 

@@ -359,39 +359,29 @@ class ServerListener:
 
         self.is_reconnecting = True
         self.ping_active = False  # Stop pinging
-        self.game_instance.number_label.config(text=f"Reconnection")
-
-        self.close_connection("Connection lost")  # Close the current connection
-        # self.show_reconnecting_screen()  # Show reconnecting message
-
-        # for attempt in range(self.reconnection_attempts):
-        #     try:
-        #         print(f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
-        #         self.client_socket.connect((self.server, self.port))  # Replace with server IP and port
-        #         self.game_instance.number_lable.config(text=f"Reconnection attempt {attempt + 1}/{self.reconnection_attempts}...")
-        #         print("Reconnected to server.")
-        #         self.ping_active = True
-        #         threading.Thread(target=self.ping, daemon=True).start()
-        #         return
-        #     except Exception as e:
-        #         print(f"Reconnection failed: {e}")
-        #         time.sleep(1)  # Wait 1 second before retrying
+        self.game_instance.number_label.config(text="Reconnection in progress...")
 
         for attempt in range(1, self.reconnection_attempts + 1):
             try:
                 time.sleep(1)  # Wait before attempting to reconnect
-                # self.client_socket.close()
-                self.close_connection("Trying to connect")  # Close the current connection
-                self.client_socket = socket.socket()
-                self.client_socket.connect((self.server, self.port))  # Replace with your server address
-                print("Reconnection successful.")
-                self.reset_reconnection_timer()  # Reset reconnection attempts
-                self.start_pinging()  # Resume pinging
-                self.listen_to_server()  # Resume listening
-                return
+                print(f"Reconnection attempt {attempt}/{self.reconnection_attempts}...")
+
+                # Test if the socket is still valid by sending a ping
+                self.client_socket.settimeout(2)  # Set a timeout for the operation
+                self.client_socket.sendall(b"RPS|ping;")  # Attempt to send a ping
+                response = self.client_socket.recv(1024).decode("utf-8").strip()  # Attempt to receive a pong
+                if response == "RPS|pong;":
+                    print("Reconnection successful. Server responded to ping.")
+                    self.client_socket.settimeout(None)  # Restore blocking mode
+                    self.ping_active = True
+                    self.start_pinging()  # Resume pinging
+                    self.listen_to_server()  # Resume listening
+                    return
+
+            except socket.timeout:
+                print(f"ERROR > No response from server during attempt {attempt}/{self.reconnection_attempts}")
             except Exception as e:
                 print(f"ERROR > Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
-                self.game_instance.number_label.config(text=f"{attempt}/{self.reconnection_attempts}")
 
         print("Failed to reconnect. Returning to login screen.")
         self.disconnect_client()
