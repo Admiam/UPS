@@ -267,15 +267,28 @@ class ServerListener:
             current_round,
         )
 
+    # def show_waiting_screen(self):
+    #     """Show the waiting screen."""
+    #     self.waiting_screen_active = True
+    #     tk.Label(self.waiting_screen, text="Waiting for other players...", font=("Arial", 16)).pack(pady=20)
+    #
+    #     # Cancel button to close the waiting screen and disconnect
+    #     cancel_button = tk.Button(self.waiting_screen, text="Cancel", command=self.cancel_waiting)
+    #     cancel_button.pack(pady=10)
+
     def show_waiting_screen(self):
-        """Show the waiting screen."""
-        self.waiting_screen_active = True
-        tk.Label(self.waiting_screen, text="Waiting for other players...", font=("Arial", 16)).pack(pady=20)
+        """Safely show the waiting screen."""
+        self.waiting_screen.after(0, self._create_waiting_screen)
+
+    def _create_waiting_screen(self):
+        """Create the waiting screen."""
+        self.waiting_screen = tk.Toplevel(self.waiting_screen)
+        self.waiting_screen.title("Waiting")
+        tk.Label(self.waiting_screen, text="Please wait...").pack(pady=20)
 
         # Cancel button to close the waiting screen and disconnect
         cancel_button = tk.Button(self.waiting_screen, text="Cancel", command=self.cancel_waiting)
         cancel_button.pack(pady=10)
-
     def cancel_waiting(self):
         """Cancel the waiting process and clean up."""
         if self.client_socket:
