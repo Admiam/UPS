@@ -9,6 +9,7 @@
 #include <sys/socket.h>
 #include "GameLogic.h"
 #include <set>
+#include <algorithm>
 
 struct Player
 {

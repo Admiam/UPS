@@ -5,7 +5,6 @@
 #include <chrono>
 #include <iomanip>
 
-
 void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd)
 {
     // std::cout << "kokot1\n";

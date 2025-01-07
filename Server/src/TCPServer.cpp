@@ -1,5 +1,6 @@
 #include "TCPServer.h"
 #include <iostream>
+#include <cstring> // Required for strerror()
 
 // Constructor: Initialize the server on the specified port
 TCPServer::TCPServer(int port) : port(port), server_socket(-1)
