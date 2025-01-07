@@ -244,7 +244,6 @@ class Game:
             button.config(state=tk.NORMAL)
         self.update_countdown(5)  # Start a 5-second countdown
 
-
     def return_to_waiting_screen(self):
         """Return to the waiting screen."""
         self.game_window.destroy()

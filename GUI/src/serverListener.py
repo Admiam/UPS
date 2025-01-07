@@ -57,19 +57,6 @@ class ServerListener:
 
     def ping(self):
         """Send periodic pings to the server."""
-        # while self.ping_active:
-        #     try:
-        #         self.client_socket.sendall("RPS|ping".encode("utf-8"))
-        #         threading.Event().wait(5)  # Wait for 5 seconds
-        #         response = self.client_socket.recv(1024).decode("utf-8")
-        #         if response.strip() != "RPS|pong;":
-        #             print("Invalid pong response from server")
-        #             self.disconnect_client()
-        #             break
-        #     except Exception as e:
-        #         print(f"Ping error: {e}")
-        #         self.disconnect_client()
-        #         break
         while self.ping_active:
             try:
                 if time.time() - self.last_pong_received > 3:  # Check for timeout
@@ -89,9 +76,14 @@ class ServerListener:
     def cleanup(self):
         """Handle cleanup when the window is closed."""
         self.ping_active = False
-        self.client_socket.sendall(b"exit|" + self.player_name.encode("utf-8"))
-        self.client_socket.close()
-        self.waiting_screen.destroy()
+        self.is_reconnecting = False
+        if self.client_socket:
+            self.client_socket.close()
+        self.update_gui_safe(self.waiting_screen.destroy)
+        # self.ping_active = False
+        # self.client_socket.sendall(b"exit|" + self.player_name.encode("utf-8"))
+        # self.client_socket.close()
+        # self.waiting_screen.destroy()
 
     def register_game_instance(self, game_window):
         """Register the game instance for updates."""
@@ -104,23 +96,21 @@ class ServerListener:
         while True:
             try:
                 response = self.client_socket.recv(1024).decode("utf-8")
-                print(f"Server response: {response}")
+                # print(f"Server response: {response}")
                 buffer += response  # Append new data to the buffer
 
                 while ";" in buffer:  # Process messages
                     message, buffer = buffer.split(";", 1)
                     if message.startswith("RPS|"):
-                        # print(f"Valid message: {message}")
+                        print("SERVER > ", message)
                         if message == "RPS|pong":
                             self.last_pong_received = time.time()  # Update pong timestamp
-                            print("SERVER > ", message)
-                            self.reset_reconnection_timer()  # Reset reconnection attempts
-
+                            # self.reset_reconnection_timer()  # Reset reconnection attempts
                         else:
                             print(f"Valid message: {message}")
                             self.route_server_message(message[4:])
                     else:
-                        print(f"Invalid message received: {message}")
+                        # print(f"Invalid message received: {message}")
                         self.disconnect_client("Invalid message received")  # Disconnect with error
                         return  # Exit the thread after disconnecting
 
@@ -297,6 +287,9 @@ class ServerListener:
 
     def return_to_waiting_screen(self):
         """Return to the waiting screen."""
+        self.ping_active = True  # Ensure pings continue in the waiting screen
+        self.is_reconnecting = False  # Stop reconnection logic
+
         if self.game_instance and self.game_instance.game_window:
             self.update_gui_safe(self.game_instance.game_window.destroy)
 
@@ -368,7 +361,7 @@ class ServerListener:
 
     def handle_internet_reconnection(self):
         """Handle reconnection attempts when the connection is lost."""
-        if self.is_reconnecting:
+        if self.is_reconnecting or not self.ping_active:
             return  # Avoid overlapping reconnection attempts
 
         self.is_reconnecting = True
