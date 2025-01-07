@@ -366,8 +366,8 @@ class ServerListener:
 
         self.is_reconnecting = True
         self.ping_active = False  # Stop pinging
-        # if self.game_instance:
-        #     self.game_instance.number_label.config(text=f"Reconnection")
+        if self.game_instance and self.game_instance.game_window and self.game_instance.game_window.winfo_exists():
+            self.game_instance.number_label.config(text=f"Reconnection")
 
         self.close_connection("Connection lost")  # Close the current connection
 
@@ -387,7 +387,7 @@ class ServerListener:
                 return
             except Exception as e:
                 print(f"ERROR > Reconnection attempt {attempt}/{self.reconnection_attempts} failed: {e}")
-                if self.game_instance:
+                if self.game_instance and self.game_instance.game_window and self.game_instance.game_window.winfo_exists():
                     self.game_instance.number_label.config(text=f"{attempt}/{self.reconnection_attempts}")
 
         print("Failed to reconnect. Returning to login screen.")
