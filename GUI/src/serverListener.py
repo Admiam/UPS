@@ -366,8 +366,8 @@ class ServerListener:
 
         self.is_reconnecting = True
         self.ping_active = False  # Stop pinging
-        if self.game_instance:
-            self.game_instance.number_label.config(text=f"Reconnection")
+        # if self.game_instance:
+        #     self.game_instance.number_label.config(text=f"Reconnection")
 
         self.close_connection("Connection lost")  # Close the current connection
 
