@@ -173,7 +173,7 @@ class ServerListener:
     def handle_group_assignment(self, message):
         group_id, self.opponent_name = message.split("|", 1)
         print(f"Assigned to {group_id} with opponent {self.opponent_name}")
-        self.update_gui_safe(self.start_game, group_id, 0, 0, 1)
+        self.update_gui_safe(self.start_game, group_id, 0, 0, 0)
 
     def handle_reconnection(self, message):
         parts = message.split("|")
@@ -298,8 +298,9 @@ class ServerListener:
     def return_to_waiting_screen(self):
         """Return to the waiting screen."""
         if self.game_instance and self.game_instance.game_window:
-            self.game_instance.game_window.destroy()
-        self.show_waiting_screen()
+            self.update_gui_safe(self.game_instance.game_window.destroy)
+
+        self.update_gui_safe(self.show_waiting_screen)
 
     def update_gui_safe(self, func, *args):
         """Safely update the GUI from a different thread."""
