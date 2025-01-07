@@ -62,15 +62,6 @@ std::string GameLogic::extract_payload(const std::string &message)
     return message.substr(4); // Skip the first 4 bytes
 }
 
-void GameLogic::print_hex(const std::string &str)
-{
-    for (unsigned char c : str)
-    {
-        std::cout << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(c) << " ";
-    }
-    std::cout << std::dec << "\n";
-}
-
 std::string GameLogic::normalize_string(const std::string &str)
 {
     std::string normalized;

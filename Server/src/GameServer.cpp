@@ -354,12 +354,12 @@ void GameServer::handle_reconnection_timeout(const std::string &group_id, const 
 
 void GameServer::handle_reconnection(const std::string &player_id, int new_fd)
 {
-    std::lock_guard<std::mutex> lock(game_mutex);
+    // std::lock_guard<std::mutex> lock(game_mutex);
 
     auto it = disconnected_players.find(player_id);
     if (it == disconnected_players.end())
     {
-        std::cerr << "Reconnection failed: Player " << player_id << " not in disconnected list.\n";
+        std::cerr << "ERROR > Reconnection failed: Player " << player_id << " not in disconnected list.\n";
         return;
     }
 
@@ -383,7 +383,7 @@ void GameServer::handle_reconnection(const std::string &player_id, int new_fd)
         }
     }
 
-    std::cout << "Player " << player_id << " reconnected successfully.\n";
+    std::cout << "RECONNECT > Player " << player_id << " reconnected successfully.\n";
 }
 
 int GameServer::get_socket_fd_for_player(const std::string &player_id) const
@@ -404,11 +404,70 @@ int GameServer::get_socket_fd_for_player(const std::string &player_id) const
     return -1; // Return -1 if the player ID is not found
 }
 
+std::string GameServer::extract_payload(const std::string &message)
+{
+    if (message.size() <= 4)
+    {
+        return ""; // Invalid message, return an empty string
+    }
+    return message.substr(4); // Skip the first 4 bytes
+}
+
+std::string GameServer::normalize_string(const std::string &str)
+{
+    std::string normalized;
+    for (size_t i = 0; i < str.size(); ++i)
+    {
+        // Check if the current and next byte represent \u00A0 in UTF-8
+        if (i + 1 < str.size() && static_cast<unsigned char>(str[i]) == 0xC2 &&
+            static_cast<unsigned char>(str[i + 1]) == 0xA0)
+        {
+            normalized += ' '; // Replace non-breaking space with a regular space
+            ++i;               // Skip the next byte
+        }
+        else
+        {
+            normalized += str[i];
+        }
+    }
+    return normalized;
+}
+
+std::string GameServer::trim(const std::string &str)
+{
+    size_t first = str.find_first_not_of(" \t\n\r");
+    if (first == std::string::npos)
+        return ""; // String is all whitespace
+
+    size_t last = str.find_last_not_of(" \t\n\r");
+    return str.substr(first, (last - first + 1));
+}
+
 std::string GameServer::get_player_group(const std::string &player_id)
 {
+    // std::cout << "DEBUG > Searching for player ID: " << player_id << " in groups.\n";
+
     for (const auto &group : groups)
     {
+        // std::cout << "DEBUG > Checking group ID: " << group.first << "\n";
         const auto &players = group.second.players;
+
+        // Print the players in the current group
+        // std::cout << "DEBUG > Players in group " << group.first << ": ";
+        for (const auto &player : players)
+        {
+            // std::cout << player.player_id << " ";
+           
+            // std::cout << "------------------\n";
+            // print_to_hex(normalize_string(trim(extract_payload(player.player_id))));
+            // std::cout << "------------------\n";
+            // print_to_hex(player_id);
+            // std::cout << "------------------\n";
+            if (normalize_string(trim(extract_payload(player_id))) == normalize_string(trim(extract_payload(player.player_id))))
+                std::cout << "DEBUG > Return group " << group.first << "\n";
+                return group.first;
+        }
+        // std::cout << "\n";
 
         // Use std::find_if to check if the player exists in the vector
         auto it = std::find_if(players.begin(), players.end(),
@@ -417,9 +476,12 @@ std::string GameServer::get_player_group(const std::string &player_id)
 
         if (it != players.end())
         {
+            // std::cout << "DEBUG > Found player ID: " << player_id << " in group ID: " << group.first << "\n";
             return group.first; // Return the group ID if the player is found
         }
     }
+
+    // std::cout << "DEBUG > Player ID: " << player_id << " not found in any group.\n";
     return ""; // Player not found in any group
 }
 
@@ -604,17 +666,6 @@ void GameServer::print_to_hex(const std::string &str) const
     std::cout << std::dec << "\n";
 }
 
-std::string GameServer::normalize_player_id(const std::string &player_id) const
-{
-    // Remove trailing null bytes or other padding
-    size_t end = player_id.find_last_not_of('\0');
-    if (end != std::string::npos)
-    {
-        return player_id.substr(0, end + 1);
-    }
-    return player_id;
-}
-
 void GameServer::print_player_queue() const
 {
     std::cout << "\n========== Player Queue ==========\n";
@@ -758,14 +809,23 @@ void GameServer::notify_opponent_reconnected(const std::string &player_id)
     }
 
     Group &group = groups[group_id];
+
+    // Message to notify players
+    std::string success_msg = "RPS|opponent_reconnected;";
+
     for (const auto &player : group.players)
     {
-        if (player.player_id != player_id)
+        if (player.player_id != player_id) // Notify the opponent
         {
-            std::string reconnect_message = "RPS|opponent_reconnected;";
-            int fd = get_socket_fd_for_player(player.player_id);
-            send(fd, reconnect_message.c_str(), reconnect_message.size(), 0);
+            int opponent_fd = player.socket_fd;
+            send(opponent_fd, success_msg.c_str(), success_msg.size(), 0);
             std::cout << "RECONNECT > Notified " << player.player_id << " about reconnection of " << player_id << ".\n";
+        }
+        else // Optionally, notify the reconnected player
+        {
+            int reconnected_fd = player.socket_fd;
+            send(reconnected_fd, success_msg.c_str(), success_msg.size(), 0);
+            std::cout << "RECONNECT > Player " << player_id << " with new socket FD: " << reconnected_fd << " notified.\n";
         }
     }
 }

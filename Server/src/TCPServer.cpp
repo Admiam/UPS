@@ -193,7 +193,7 @@ void TCPServer::handleClientData(int fd)
                 game_server.update_ping(player_id);
                 // Respond with a pong
                 std::string pong_message = "RPS|pong;";
-                // std::cout << "send: " << pong_message << "\n";
+                std::cout << "SERVER > send: " << pong_message << "\n";
 
                 send(fd, pong_message.c_str(), pong_message.size(), 0);
                 if (game_server.is_player_reconnecting(player_id))
@@ -302,9 +302,10 @@ void TCPServer::handleClientData(int fd)
                 game_server.handle_reconnection(player_id, fd);
 
                 // Respond to the client
-                std::string success_msg = "RPS|reconnect|success;";
-                send(fd, success_msg.c_str(), success_msg.size(), 0);
-                std::cout << "Reconnected player " << player_id << " with new socket FD: " << fd << "\n";
+                // std::string success_msg = "RPS|opponent_reconnected;";
+                // send(fd, success_msg.c_str(), success_msg.size(), 0);
+                game_server.notify_opponent_reconnected(player_id);
+                std::cout << "RECONNECT > player " << player_id << " with new socket FD: " << fd << "\n";
             }
         }
         else
