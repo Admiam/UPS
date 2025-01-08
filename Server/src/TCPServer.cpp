@@ -247,11 +247,11 @@ void TCPServer::handleClientData(int fd)
                 std::string player_id = socket_to_player_id[fd];
                 std::string group_id = game_server.get_player_group(player_id);
 
-                if (group_id.empty())
-                {
-                    std::cerr << "Player " << player_id << " is not part of any group.\n";
-                    return;
-                }
+                // if (group_id.empty())
+                // {
+                //     std::cerr << "Player " << player_id << " is not part of any group.\n";
+                //     return;
+                // }
 
                 if (game_server.register_choice(group_id, player_id, choice))
                 {
