@@ -96,6 +96,9 @@ public:
     void handle_reconnection(const std::string &player_id, int socket_fd);
     void notify_opponent_reconnected(const std::string &player_id);
     void check_for_inactive_players();
+    std::string trim(const std::string &str);
+    std::string normalize_string(const std::string &str);
+    std::string extract_payload(const std::string &message);
 
 private:
     std::unordered_map<std::string, Group> groups;
@@ -120,7 +123,5 @@ private:
     void print_disconnected_players() const;
     void disconnect_player_due_to_timeout(const std::string &player_id);
     void notify_opponent_disconnected(const std::string &player_id, const std::string &group_id);
-    std::string trim(const std::string &str);
-    std::string normalize_string(const std::string &str);
-    std::string extract_payload(const std::string &message);
+
 };
