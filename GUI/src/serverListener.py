@@ -396,8 +396,8 @@ class ServerListener:
 
     def send_reconnect_message(self):
         """Send a reconnect message to the server."""
-        magic = "RPS".encode('utf-8')  # Magic number as bytes
-        command = "reconnect".encode('utf-8')  # Command as bytes
+        magic = "RPS|".encode('utf-8')  # Magic number as bytes
+        command = "reconnect|".encode('utf-8')  # Command as bytes
         message = self.player_name.encode('utf-8')  # Player name as bytes
         total_length = len(magic) + len(command) + len(message) + 4  # 4 bytes for total_length (unsigned int)
 
