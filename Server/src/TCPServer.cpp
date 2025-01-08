@@ -290,11 +290,11 @@ void TCPServer::handleClientData(int fd)
                 std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
                 std::string group_id = game_server.get_player_group(player_id);
 
-                if (group_id.empty())
-                {
-                    std::cerr << "Reconnection failed: Player " << player_id << " is not part of any group.\n";
-                    return;
-                }
+                // if (group_id.empty())
+                // {
+                //     std::cerr << "Reconnection failed: Player " << player_id << " is not part of any group.\n";
+                //     return;
+                // }
 
                 // Update the socket mapping for the player
                 socket_to_player_id[fd] = player_id;
