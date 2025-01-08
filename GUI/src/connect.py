@@ -2,6 +2,7 @@
 import socket
 import struct
 
+
 def connect_to_server(server_ip, player_name, port):
     # server_port = 4242  # Define your server's port
     try:

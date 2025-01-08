@@ -280,6 +280,8 @@ void GameServer::handle_reconnection(const std::string &player_id, int new_fd)
 {
     // std::lock_guard<std::mutex> lock(game_mutex);
 
+    print_disconnected_players();
+    
     auto it = disconnected_players.find(player_id);
     if (it == disconnected_players.end())
     {

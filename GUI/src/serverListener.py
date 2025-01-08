@@ -399,14 +399,14 @@ class ServerListener:
         magic = "RPS|".encode('utf-8')  # Magic number as bytes
         command = "reconnect|".encode('utf-8')  # Command as bytes
         message = self.player_name.encode('utf-8')  # Player name as bytes
-        total_length = len(magic) + len(command) + len(message) + 4  # 4 bytes for total_length (unsigned int)
+        total_length = len(magic) + len(command) + len(message) # 4 bytes for total_length (unsigned int)
 
         # Pack and send the data
         buffer = struct.pack(f'!{len(magic)}s{len(command)}sI{len(message)}s',
                              magic, command, total_length, message)
         print(f"Sending buffer: {buffer}")
         try:
-            self.client_socket.sendall(buffer)
+            self.client_socket.send(buffer)
             # print("Reconnect message sent successfully.")
         except Exception as e:
             print(f"Error sending reconnect message: {e}")
