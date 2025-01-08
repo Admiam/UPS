@@ -240,6 +240,8 @@ class Game:
     def unfreeze_game(self):
         """Unfreeze the game and enable buttons."""
         self.is_frozen = False
+        self.round -= 1
+        self.start_new_round()
         for button in self.buttons:
             button.config(state=tk.NORMAL)
         # self.update_countdown(5)  # Start a 5-second countdown

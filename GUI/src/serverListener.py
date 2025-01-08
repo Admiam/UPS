@@ -226,8 +226,6 @@ class ServerListener:
         print("Opponent reconnected. Resuming game.")
         if self.game_instance:
             self.game_instance.unfreeze_game()
-            self.start_game(self.game_instance.group_name, self.game_instance.p1_score, self.game_instance.p2_score, self.game_instance.round)
-            # self.game_instance.update_countdown(5)
 
     def handle_return_to_waiting(self):
         print("Returning to waiting screen.")
