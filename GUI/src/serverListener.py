@@ -396,8 +396,8 @@ class ServerListener:
 
     def send_reconnect_message(self):
         """Send a reconnect message to the server."""
-        magic = b'RPS'  # Magic number as bytes
-        command = b'reconnect'  # Command as bytes
+        magic = "RPS".encode('utf-8')  # Magic number as bytes
+        command = "reconnect".encode('utf-8')  # Command as bytes
         message = self.player_name.encode('utf-8')  # Player name as bytes
         total_length = len(magic) + len(command) + len(message) + 4  # 4 bytes for total_length (unsigned int)
 
@@ -407,7 +407,7 @@ class ServerListener:
         print(f"Sending buffer: {buffer}")
         try:
             self.client_socket.sendall(buffer)
-            print("Reconnect message sent successfully.")
+            # print("Reconnect message sent successfully.")
         except Exception as e:
             print(f"Error sending reconnect message: {e}")
     def show_reconnecting_screen(self):
