@@ -380,9 +380,10 @@ std::string GameServer::get_player_group(const std::string &player_id)
         for (const auto &player : players)
         {
             std::cout << player.player_id << " ";
-            if (normalize_string(trim(extract_payload(player_id))) == normalize_string(trim(extract_payload(player.player_id))))
+            if (normalize_string(trim(extract_payload(player_id))) == normalize_string(trim(extract_payload(player.player_id)))){
                 std::cout << "DEBUG > Return group " << group.first << "\n";
-            return group.first;
+                return group.first;
+            }
         }
         std::cout << "\n";
 
