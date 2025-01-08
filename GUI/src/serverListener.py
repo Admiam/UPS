@@ -4,6 +4,7 @@ from tkinter import messagebox
 import tkinter as tk
 import socket
 import time
+import struct
 
 
 class ServerListener:
@@ -373,14 +374,15 @@ class ServerListener:
         for attempt in range(1, self.reconnection_attempts + 1):
             try:
                 time.sleep(1)  # Wait before attempting to reconnect
+
                 # self.client_socket.close()
                 self.close_connection("Trying to connect")  # Close the current connection
                 self.client_socket = socket.socket()
                 self.client_socket.connect((self.server, self.port))  # Replace with your server address
                 print("Reconnection successful.")
                 self.reset_reconnection_timer()  # Reset reconnection attempts
-                message = f"RPS|reconnect|{self.player_name}"
-                self.client_socket.sendall(message.encode("utf-8"))
+                self.send_reconnect_message()
+                # self.client_socket.sendall(message.encode("utf-8"))
                 self.start_pinging()  # Resume pinging
                 self.listen_to_server()  # Resume listening
                 return
@@ -392,6 +394,22 @@ class ServerListener:
         print("Failed to reconnect. Returning to login screen.")
         self.disconnect_client()
 
+    def send_reconnect_message(self):
+        """Send a reconnect message to the server."""
+        magic = b'RPS'  # Magic number as bytes
+        command = b'reconnect'  # Command as bytes
+        message = self.player_name.encode('utf-8')  # Player name as bytes
+        total_length = len(magic) + len(command) + len(message) + 4  # 4 bytes for total_length (unsigned int)
+
+        # Pack and send the data
+        buffer = struct.pack(f'!{len(magic)}s{len(command)}sI{len(message)}s',
+                             magic, command, total_length, message)
+        print(f"Sending buffer: {buffer}")
+        try:
+            self.client_socket.sendall(buffer)
+            print("Reconnect message sent successfully.")
+        except Exception as e:
+            print(f"Error sending reconnect message: {e}")
     def show_reconnecting_screen(self):
         """Display a reconnecting message to the user."""
         messagebox.showinfo("Reconnecting", "Attempting to reconnect... Please wait.")

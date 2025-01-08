@@ -376,13 +376,15 @@ std::string GameServer::get_player_group(const std::string &player_id)
         // std::cout << "DEBUG > Checking group ID: " << group.first << "\n";
         const auto &players = group.second.players;
 
-        // std::cout << "DEBUG > Players in group " << group.first << ": ";
+        std::cout << "DEBUG > Players in group " << group.first << ": ";
         for (const auto &player : players)
         {
+            std::cout << player.player_id << " ";
             if (normalize_string(trim(extract_payload(player_id))) == normalize_string(trim(extract_payload(player.player_id))))
                 std::cout << "DEBUG > Return group " << group.first << "\n";
             return group.first;
         }
+        std::cout << "\n";
 
         // Use std::find_if to check if the player exists in the vector
         auto it = std::find_if(players.begin(), players.end(),
