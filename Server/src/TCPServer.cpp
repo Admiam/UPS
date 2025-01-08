@@ -69,7 +69,7 @@ void TCPServer::setupSocket()
 // Main loop to handle new connections and data from clients
 void TCPServer::run()
 {
-    fd_set tests; // Temporary file descriptor set for select()
+    fd_set tests;           // Temporary file descriptor set for select()
     struct timeval timeout; // Timeout for select()
     auto last_check = std::chrono::steady_clock::now();
     bool running = true; // Server loop flag
@@ -182,7 +182,6 @@ void TCPServer::handleClientData(int fd)
             std::cout << "CLIENT > " << message << std::endl;
             std::vector<std::string> parts = split(message, '|');
 
-
             if (message == "RPS|ping")
             {
                 std::string player_id = get_player_id_from_socket(fd);
@@ -205,11 +204,11 @@ void TCPServer::handleClientData(int fd)
                 game_server.check_for_inactive_players();
             }
             else if (parts.size() > 1 && parts[1] == "login")
-                {
-                    std::string player_id = parts[2];
-                    game_server.add_player_to_queue(player_id, fd);
-                    socket_to_player_id[fd] = player_id; // Map socket FD to player ID
-                }
+            {
+                std::string player_id = parts[2];
+                game_server.add_player_to_queue(player_id, fd);
+                socket_to_player_id[fd] = player_id; // Map socket FD to player ID
+            }
             else if (parts.size() > 1 && parts[1] == "lobby")
             {
                 if (parts.size() == 3)
@@ -228,20 +227,20 @@ void TCPServer::handleClientData(int fd)
                 }
             }
             else if (parts.size() > 1 && parts[1] == "ready")
+            {
+                if (parts.size() < 3)
                 {
-                    if (parts.size() < 3)
-                    {
-                        std::cerr << "Invalid 'ready' message format: " << message << "\n";
-                        return;
-                    }
-
-                    std::string player_id = parts[2];
-
-                    std::cout << "Player " << player_id << " is ready.\n";
-
-                    // Notify the GameServer about the readiness of the player
-                    game_server.handle_ready_message(player_id);
+                    std::cerr << "Invalid 'ready' message format: " << message << "\n";
+                    return;
                 }
+
+                std::string player_id = parts[2];
+
+                std::cout << "Player " << player_id << " is ready.\n";
+
+                // Notify the GameServer about the readiness of the player
+                game_server.handle_ready_message(player_id);
+            }
             else if (parts.size() > 2 && parts[1] == "game")
             {
                 std::string choice = parts[2];
@@ -316,7 +315,7 @@ void TCPServer::handleClientData(int fd)
         }
     }
     else
-    { 
+    {
         handleClientDisconnection(fd);
     }
 }

@@ -401,8 +401,9 @@ class ServerListener:
         print(f"ERORR > {reason}")
         try:
             if self.client_socket:
-                self.client_socket.settimeout(1)  # 1-second timeout for recv
-                # self.client_socket = None  # Clear the socket reference
+                # self.client_socket.settimeout(1)  # 1-second timeout for recv
+                self.client_socket.close()
+                self.client_socket = None  # Clear the socket reference
         except Exception as e:
             print(f"Error closing socket: {e}")
 

@@ -74,7 +74,6 @@ struct DisconnectedPlayer
     std::chrono::time_point<std::chrono::steady_clock> disconnect_time;
 };
 
-
 class GameServer
 {
 public:
@@ -98,10 +97,10 @@ public:
     void notify_opponent_reconnected(const std::string &player_id);
     void check_for_inactive_players();
 
-private: 
+private:
     std::unordered_map<std::string, Group> groups;
     std::unordered_map<std::string, Player *> player_directory;
-    std::queue<std::pair<std::string, int>> player_queue; 
+    std::queue<std::pair<std::string, int>> player_queue;
     std::unordered_map<std::string, DisconnectedPlayer> disconnected_players;
     std::unordered_map<int, std::string> socket_to_player_id;
     std::unordered_map<std::string, std::chrono::steady_clock::time_point> player_last_ping;
