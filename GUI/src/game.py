@@ -237,10 +237,11 @@ class Game:
         for button in self.buttons:
             button.config(state=tk.DISABLED)
 
-    def unfreeze_game(self):
+    def unfreeze_game(self, client_socket):
         """Unfreeze the game and enable buttons."""
         self.is_frozen = False
         self.round -= 1
+        self.server_listener = client_socket
         self.start_new_round()
         for button in self.buttons:
             button.config(state=tk.NORMAL)
