@@ -206,7 +206,7 @@ void TCPServer::handleClientData(int fd)
             }
             else if (parts.size() > 1 && parts[1] == "login")
             {
-                std::string player_id = parts[2];
+                std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
                 game_server.add_player_to_queue(player_id, fd);
                 socket_to_player_id[fd] = player_id; // Map socket FD to player ID
             }
@@ -214,7 +214,7 @@ void TCPServer::handleClientData(int fd)
             {
                 if (parts.size() == 3)
                 {
-                    std::string player_id = parts[2];
+                    std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
 
                     game_server.add_player_to_queue(player_id, fd);
                     socket_to_player_id[fd] = player_id; // Map socket FD to player ID
@@ -222,8 +222,9 @@ void TCPServer::handleClientData(int fd)
                 else
                 {
                     std::cerr << "Invalid 'lobby' message format.\n";
-                    std::string error_msg = "error|invalid_message_format";
+                    std::string error_msg = "RPS|invalid_message_format;";
                     send(fd, error_msg.c_str(), error_msg.size(), 0);
+                    std::cout << "SERVER > send: " << error_msg << "\n";
                     // TODO disconnect client
                 }
             }
@@ -235,7 +236,7 @@ void TCPServer::handleClientData(int fd)
                     return;
                 }
 
-                std::string player_id = parts[2];
+                std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
 
                 std::cout << "Player " << player_id << " is ready.\n";
 
@@ -278,6 +279,7 @@ void TCPServer::handleClientData(int fd)
                 // Send confirmation to the client
                 std::string confirmation_msg = "RPS|lobby|success;";
                 send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
+                std::cout << "SERVER > send: " << confirmation_msg << "\n";
             }
             else if (parts.size() > 1 && parts[1] == "reconnect")
             {

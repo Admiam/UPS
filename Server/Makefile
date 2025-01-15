@@ -1,4 +1,4 @@
-CC=clang++
+CC=g++
 CFLAGS= -std=c++20
 SRCDIR=src
 BUILDDIR=build

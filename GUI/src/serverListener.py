@@ -81,10 +81,6 @@ class ServerListener:
         if self.client_socket:
             self.client_socket.close()
         self.update_gui_safe(self.waiting_screen.destroy)
-        # self.ping_active = False
-        # self.client_socket.sendall(b"exit|" + self.player_name.encode("utf-8"))
-        # self.client_socket.close()
-        # self.waiting_screen.destroy()
 
     def register_game_instance(self, game_window):
         """Register the game instance for updates."""

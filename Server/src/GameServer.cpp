@@ -65,6 +65,7 @@ void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd
 
             send(socket_fd, resume_message.c_str(), resume_message.size(), 0);
             std::cout << "Sent resume message to " << player_id << ": " << resume_message << "\n";
+            std::cout << "SERVER > send: " << resume_message << "\n";
 
             // Notify the opponent that the player has reconnected
             for (const auto &player : group.players)
@@ -75,6 +76,7 @@ void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd
                     std::string reconnect_message = "RPS|reconnect|" + player_id + "|game_resume" + ";";
                     send(other_fd, reconnect_message.c_str(), reconnect_message.size(), 0);
                     std::cout << "RECONNECT > Notified " << player.player_id << " of reconnection: " << reconnect_message << "\n";
+                    std::cout << "SERVER > send: " << reconnect_message << "\n";
                 }
             }
         }
@@ -131,8 +133,6 @@ void GameServer::attempt_to_form_group()
     std::string message_to_player1 = "RPS|" + group_id + "|" + player2.first + ";";
     std::string message_to_player2 = "RPS|" + group_id + "|" + player1.first + ";";
 
-    std::cout << "SERVER SENT > " << message_to_player1 << "\n";
-    std::cout << "SERVER SENT > " << message_to_player2 << "\n";
 
     // player_directory[player1.first] = &groups[group_id].players.back();
     // player_directory[player2.first] = &groups[group_id].players.back();
@@ -141,7 +141,10 @@ void GameServer::attempt_to_form_group()
     player_directory[player2.first] = &groups[group_id].players[1];
 
     send(player1.second, message_to_player1.c_str(), message_to_player1.size(), 0);
+    std::cout << "SERVER SENT > " << message_to_player1 << "\n";
+
     send(player2.second, message_to_player2.c_str(), message_to_player2.size(), 0);
+    std::cout << "SERVER SENT > " << message_to_player2 << "\n";
 
     print_groups();
 
@@ -301,14 +304,32 @@ void GameServer::handle_reconnection(const std::string &player_id, int new_fd)
         {
             if (player.player_id == player_id)
             {
+                // Remove old socket_fd mapping if it exists
+                for (auto socket_it = socket_to_player_id.begin(); socket_it != socket_to_player_id.end(); ++socket_it)
+                {
+                    if (socket_it->second == player_id)
+                    {
+                        socket_to_player_id.erase(socket_it);
+                        break;
+                    }
+                }
+
                 player.socket_fd = new_fd;
                 player.is_connected = true;
+
+                // Add new socket_fd mapping
+                socket_to_player_id[new_fd] = player_id;
+
                 break;
             }
         }
     }
+    else
+    {
+        std::cerr << "ERROR > Group " << group_id << " not found for player " << player_id << "\n";
+    }
 
-    std::cout << "RECONNECT > Player " << player_id << " reconnected successfully.\n";
+    std::cout << "RECONNECT > Player " << player_id << " reconnected successfully with new FD: " << new_fd << "\n";
 }
 
 int GameServer::get_socket_fd_for_player(const std::string &player_id) const
@@ -474,8 +495,9 @@ void GameServer::process_group_round(const std::string &group_id)
     // std::cout << "Player 1 socket: " << player1_fd << "\n";
     // Send scores to both players
     send(player1_fd, player1_score_msg.c_str(), player1_score_msg.size(), 0);
+    std::cout << "SERVER > send: " << player1_score_msg << " on socked fd: "  << player1_fd << "\n";
     send(player2_fd, player2_score_msg.c_str(), player2_score_msg.size(), 0);
- 
+    std::cout << "SERVER > send: " << player2_score_msg << " on socked fd: " << player2_fd << "\n";
 }
 
 void GameServer::handle_ready_message(const std::string &player_id)
@@ -497,6 +519,7 @@ void GameServer::notify_players_to_start(const Group &group)
         int socket_fd = get_socket_fd_for_player(player.player_id);
         std::string start_message = "RPS|start;";
         send(socket_fd, start_message.c_str(), start_message.size(), 0);
+        std::cout << "SERVER > send: " << start_message << "\n";
         std::cout << "GAME > Sent start message to " << player.player_id << "\n";
     }
 }
@@ -649,7 +672,6 @@ void GameServer::print_disconnected_players() const
     // std::cout << "==========================================\n";
 }
 
-// Update the last ping time for a player
 void GameServer::update_ping(const std::string &player_id)
 {
     std::lock_guard<std::mutex> lock(game_mutex);
@@ -667,7 +689,6 @@ void GameServer::update_ping(const std::string &player_id)
     player_last_ping[player_id] = std::chrono::steady_clock::now();
 }
 
-// Check for players who haven't sent a ping recently
 void GameServer::check_for_timeouts()
 {
     std::lock_guard<std::mutex> lock(game_mutex);
@@ -690,7 +711,6 @@ void GameServer::check_for_timeouts()
     }
 }
 
-// Handle the disconnection of a player due to timeout
 void GameServer::disconnect_player_due_to_timeout(const std::string &player_id)
 {
     std::cout << "DISCONNECT > Disconnecting player due to timeout: " << player_id << "\n";
@@ -735,12 +755,14 @@ void GameServer::notify_opponent_reconnected(const std::string &player_id)
             int opponent_fd = player.socket_fd;
             send(opponent_fd, success_msg.c_str(), success_msg.size(), 0);
             std::cout << "RECONNECT > Notified " << player.player_id << " about reconnection of " << player_id << ".\n";
+            std::cout << "SERVER > send: " << success_msg << "\n";
         }
         else // Optionally, notify the reconnected player
         {
             int reconnected_fd = player.socket_fd;
             send(reconnected_fd, success_msg.c_str(), success_msg.size(), 0);
             std::cout << "RECONNECT > Player " << player_id << " with new socket FD: " << reconnected_fd << " notified.\n";
+            std::cout << "SERVER > send: " << success_msg << "\n";
         }
     }
 }
@@ -756,6 +778,7 @@ void GameServer::notify_opponent_disconnected(const std::string &player_id, cons
             std::string message = "RPS|opponent_disconnected;";
             send(fd, message.c_str(), message.size(), 0);
             std::cout << "DISCONNECT > Notified " << player.player_id << " about disconnection of " << player_id << ".\n";
+            std::cout << "SERVER > send: " << message << "\n";
         }
     }
 }
