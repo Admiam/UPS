@@ -17,14 +17,15 @@
 class TCPServer
 {
 public:
-    TCPServer(int port); // Constructor initializes the server with a given port
-    ~TCPServer();        // Destructor closes the server socket
+    TCPServer(const std::string &ip, int port); // Add IP to the constructor
+    ~TCPServer();                               // Destructor closes the server socket
     void run();          // Main loop to handle incoming connections and data
 
 private:
     int server_socket;   // File descriptor for the server socket
     fd_set client_socks; // Set of file descriptors for the client sockets
     int port;            // Port number for the server
+    const std::string ip;
     GameServer game_server; // Declare GameServer instance
     std::unordered_map<int, std::string> socket_to_player_id;
 

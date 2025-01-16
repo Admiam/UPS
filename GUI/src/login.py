@@ -21,13 +21,35 @@ class Login:
         self.ip = tk.Entry(root)
         self.ip.grid(row=2, column=1, padx=10, pady=10)
 
+        tk.Label(root, text="Port:").grid(row=3, column=0, padx=10, pady=10)
+        self.port = tk.Entry(root)
+        self.port.grid(row=3, column=1, padx=10, pady=10)
+
         # Login button
         self.login_button = tk.Button(root, text="Login", command=self.attempt_login)
-        self.login_button.grid(row=3, column=0, columnspan=2, pady=10)
+        self.login_button.grid(row=4, column=0, columnspan=2, pady=10)
 
     def attempt_login(self):
         # Hard-coded server IP (or you can re-enable server IP entry in the GUI)
         self.server_ip = self.ip.get()
+        try:
+            # Get the port value from the input field
+            port_str = self.port.get()
+
+            # Verify it is a number
+            self.port = int(port_str)
+
+            # Check if the port is in the valid range (1–65535 for TCP/UDP ports)
+            if not (1 <= self.port <= 65535):
+                raise ValueError(f"Invalid port range: {self.port}")
+
+            print(f"Valid port entered: {self.port}")
+        except ValueError as e:
+            # Handle invalid input (e.g., not a number or out of range)
+            print(f"Error: {e}")
+            messagebox.showerror("Invalid Input", "Please enter a valid port number (1–65535).")
+            self.port = 4242  # Reset the port value
+
         player_name = self.entry_player.get()
 
         if not player_name:

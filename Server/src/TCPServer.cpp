@@ -1,10 +1,10 @@
 #include "TCPServer.h"
 #include "utils.cpp"
 #include <iostream>
-#include <cstring> // Required for strerror()
+#include <cstring>
+#include <arpa/inet.h>
 
-// Constructor: Initialize the server on the specified port
-TCPServer::TCPServer(int port) : port(port), server_socket(-1)
+TCPServer::TCPServer(const std::string &ip, int port) : ip(ip), port(port), server_socket(-1)
 {
     FD_ZERO(&client_socks); // Clear the client sockets set
     setupSocket();          // Set up the server socket
@@ -19,14 +19,13 @@ std::string TCPServer::get_player_id_from_socket(int fd)
     }
     return ""; // Return an empty string if player ID is not found
 }
-// Destructor: Close the server socket if it's open
+
 TCPServer::~TCPServer()
 {
     if (server_socket != -1)
         close(server_socket);
 }
 
-// Configure and bind the server socket
 void TCPServer::setupSocket()
 {
     // Create a TCP socket
@@ -45,21 +44,26 @@ void TCPServer::setupSocket()
 
     // Set up the server address structure
     sockaddr_in my_addr{};
-    my_addr.sin_family = AF_INET;         // Use IPv4
-    my_addr.sin_port = htons(port);       // Specify the port (network byte order)
-    my_addr.sin_addr.s_addr = INADDR_ANY; // Accept connections from any IP address
+    my_addr.sin_family = AF_INET;   // Use IPv4
+    my_addr.sin_port = htons(port); // Specify the port (network byte order)
+
+    // Convert the IP address string to binary form
+    if (inet_pton(AF_INET, ip.c_str(), &my_addr.sin_addr) <= 0)
+    {
+        throw std::runtime_error("Invalid IP address: " + ip);
+    }
 
     // Bind the socket to the specified port and address
     if (bind(server_socket, reinterpret_cast<sockaddr *>(&my_addr), sizeof(my_addr)) == -1)
     {
-        throw std::runtime_error("Bind error");
+        throw std::runtime_error("Bind error: " + std::string(strerror(errno)));
     }
-    std::cout << "Bind - OK\n";
+    std::cout << "Bind - OK to IP " << ip << ", Port " << port << "\n";
 
     // Set the socket to listen mode with a backlog of 5 connections
     if (listen(server_socket, 5) == -1)
     {
-        throw std::runtime_error("Listen error");
+        throw std::runtime_error("Listen error: " + std::string(strerror(errno)));
     }
     std::cout << "Listen - OK\n";
 
@@ -67,7 +71,6 @@ void TCPServer::setupSocket()
     FD_SET(server_socket, &client_socks);
 }
 
-// Main loop to handle new connections and data from clients
 void TCPServer::run()
 {
     fd_set tests;           // Temporary file descriptor set for select()
@@ -141,7 +144,6 @@ void TCPServer::run()
     cleanup();
 }
 
-// Accept and add a new client to the client sockets set
 void TCPServer::handleNewConnection()
 {
     sockaddr_in peer_addr{}; // Client address structure
@@ -160,7 +162,6 @@ void TCPServer::handleNewConnection()
     }
 }
 
-// Example usage in handleClientData
 void TCPServer::handleClientData(int fd)
 {
 
@@ -182,6 +183,12 @@ void TCPServer::handleClientData(int fd)
             std::string message(buffer.begin(), buffer.begin() + bytes_received);
             std::cout << "CLIENT > " << message << std::endl;
             std::vector<std::string> parts = split(message, '|');
+
+            if (parts.empty() || parts[0] != "RPS")
+            {
+                std::cerr << "Invalid message format.\n";
+                return;
+            }
 
             if (message == "RPS|ping")
             {
@@ -323,45 +330,6 @@ void TCPServer::handleClientData(int fd)
     }
 }
 
-// std::string TCPServer::extract_payload(const std::string &message)
-// {
-//     if (message.size() <= 4)
-//     {
-//         return ""; // Invalid message, return an empty string
-//     }
-//     return message.substr(4); // Skip the first 4 bytes
-// }
-
-// std::string TCPServer::normalize_string(const std::string &str)
-// {
-//     std::string normalized;
-//     for (size_t i = 0; i < str.size(); ++i)
-//     {
-//         // Check if the current and next byte represent \u00A0 in UTF-8
-//         if (i + 1 < str.size() && static_cast<unsigned char>(str[i]) == 0xC2 &&
-//             static_cast<unsigned char>(str[i + 1]) == 0xA0)
-//         {
-//             normalized += ' '; // Replace non-breaking space with a regular space
-//             ++i;               // Skip the next byte
-//         }
-//         else
-//         {
-//             normalized += str[i];
-//         }
-//     }
-//     return normalized;
-// }
-
-// std::string TCPServer::trim(const std::string &str)
-// {
-//     size_t first = str.find_first_not_of(" \t\n\r");
-//     if (first == std::string::npos)
-//         return ""; // String is all whitespace
-
-//     size_t last = str.find_last_not_of(" \t\n\r");
-//     return str.substr(first, (last - first + 1));
-// }
-
 void TCPServer::handleClientDisconnection(int fd)
 {
     std::string player_id = get_player_id_from_socket(fd);
@@ -422,17 +390,37 @@ void TCPServer::cleanup()
     std::cout << "Server cleanup completed. Exiting...\n";
 }
 
-int main()
+int main(int argc, char *argv[])
 {
+    if (argc != 3)
+    {
+        std::cerr << "Usage: " << argv[0] << " <IP> <Port>\n";
+        return EXIT_FAILURE;
+    }
+
+    std::string ip = argv[1];
+    int port;
+
     try
     {
-        TCPServer server(4242); // Create the server to listen on port 4242
-        server.run();           // Start the server
+        port = std::stoi(argv[2]); // Convert port to an integer
+    }
+    catch (const std::invalid_argument &)
+    {
+        std::cerr << "Invalid port number.\n";
+        return EXIT_FAILURE;
+    }
+
+    try
+    {
+        TCPServer server(ip, port); // Create the server with IP and port
+        server.run();               // Start the server
     }
     catch (const std::exception &e)
     {
         std::cerr << "Server error: " << e.what() << '\n';
         return EXIT_FAILURE;
     }
+
     return EXIT_SUCCESS;
 }
