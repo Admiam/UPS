@@ -167,65 +167,6 @@ class Game:
             self.process_selection()  # Handle player's selection and send to the server
             # self.wait_for_reconnection_or_timeout()  # Check for reconnection or timeout
 
-    # def display_image(self):
-    #     """Show an image for the round."""
-    #     try:
-    #         # Load an image (replace with the path to your image)
-    #         image = Image.open("../assets/round_start.png")  # Example image path
-    #         image = image.resize((100, 100), Image.LANCZOS)  # Resize the image
-    #         photo = ImageTk.PhotoImage(image)
-    #
-    #         if self.image_label is None:
-    #             # Create the image label if it doesn't exist
-    #             self.image_label = tk.Label(self.game_window, image=photo)
-    #             self.image_label.image = photo  # Keep a reference to avoid garbage collection
-    #             self.image_label.grid(row=1, column=2, pady=20)
-    #         else:
-    #             # Update the existing image label
-    #             self.image_label.config(image=photo)
-    #             self.image_label.image = photo
-    #     except Exception as e:
-    #         print(f"Error displaying image: {e}")
-
-    # def wait_for_reconnection_or_timeout(self):
-    #     """Wait for the opponent to reconnect or handle a timeout."""
-    #     timeout = 10  # Set the timeout duration in seconds
-    #     reconnect_event = threading.Event()  # Use an event to wait for reconnection
-    #
-    #     def listen_for_reconnection():
-    #         """Listen for a reconnection signal from the server."""
-    #         while not reconnect_event.is_set():
-    #             try:
-    #                 response = self.server_listener.recv(1024).decode('utf-8')  # Listen for server updates
-    #                 print(f"Server response: {response}")
-    #
-    #                 if response.startswith("opponent_reconnected"):
-    #                     reconnect_event.set()  # Stop waiting for reconnection
-    #                     self.unfreeze_game()  # Resume the game
-    #                     print("Opponent reconnected. Resuming game...")
-    #                     return
-    #
-    #                 elif response.startswith("return_to_waiting"):
-    #                     reconnect_event.set()
-    #                     print("Opponent did not reconnect. Returning to waiting screen...")
-    #                     self.freeze_game()
-    #                     self.return_to_waiting_screen()
-    #                     return
-    #             except Exception as e:
-    #                 print(f"Error while waiting for reconnection: {e}")
-    #                 reconnect_event.set()
-    #                 self.return_to_waiting_screen()  # Handle error by returning to the waiting screen
-    #                 return
-    #
-    #     # Start listening for reconnection in a separate thread
-    #     threading.Thread(target=listen_for_reconnection, daemon=True).start()
-    #
-    #     # Wait for reconnection or timeout
-    #     if not reconnect_event.wait(timeout):  # Wait for the event or timeout
-    #         print("Reconnection timed out. Returning to waiting screen.")
-    #         self.freeze_game()
-    #         self.return_to_waiting_screen()
-
     def reset_buttons(self):
         """Reset buttons to their default state."""
         for button in self.buttons:

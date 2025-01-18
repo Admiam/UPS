@@ -11,13 +11,24 @@
 #include <set>
 #include <algorithm>
 
+enum PlayerState
+{
+    LOBBY = 0,
+    PLAYING = 1,
+    RECONNECTING = 2,
+    DISCONNECTED = 3,
+    WAITING = 4
+};
 struct Player
 {
     std::string player_id;
     int socket_fd;
     bool is_connected;
+    PlayerState state;
 
-    Player(const std::string &id, int socket) : player_id(id), socket_fd(socket), is_connected(true) {}
+    // Constructor to initialize the player
+    Player(const std::string &id, int socket, PlayerState initial_state = LOBBY)
+        : player_id(id), socket_fd(socket), is_connected(true), state(initial_state) {}
 };
 
 struct Group
@@ -99,8 +110,12 @@ public:
     std::string trim(const std::string &str);
     std::string normalize_string(const std::string &str);
     std::string extract_payload(const std::string &message);
+    void handle_invalid_message(const std::string &player_id);
+    Player *get_player_by_id(const std::string &player_id);
+    void update_player_state(const std::string &player_id, PlayerState new_state);
+    void remove_player_from_queue(const std::string &player_id);
 
-private:
+private: 
     std::unordered_map<std::string, Group> groups;
     std::unordered_map<std::string, Player *> player_directory;
     std::queue<std::pair<std::string, int>> player_queue;

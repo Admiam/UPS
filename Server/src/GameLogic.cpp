@@ -37,6 +37,9 @@ std::string GameLogic::determine_winner(const std::string &choice1, const std::s
     std::string trimmed_choice1 = normalize_string(trim(extract_payload(choice1)));
     std::string trimmed_choice2 = normalize_string(trim(extract_payload(choice2)));
 
+    // std::cout << "Player 1 choice: " << trimmed_choice1 << "\n";
+    // std::cout << "Player 2 choice: " << trimmed_choice2 << "\n";
+
     if (trimmed_choice1 == trimmed_choice2)
     {
         return "draw";

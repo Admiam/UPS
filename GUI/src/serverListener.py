@@ -148,10 +148,12 @@ class ServerListener:
             self.handle_opponent_reconnected()
         elif message.startswith("return_to_waiting"):
             self.handle_return_to_waiting()
-        elif message == "error":
-            self.handle_server_error()
+        elif message.startswith("error"):
+            index, error_message = message.split("|", 1)
+            self.disconnect_client(error_message)  # Disconnect with error
         else:
-            print(f"Unhandled message: {message}")
+            print(f"Unhandled message : ", message)
+            self.disconnect_client("Invalid message received")  # Disconnect with error
 
     def handle_connected(self):
         print("Connection confirmed by server. Waiting for group assignment...")
@@ -216,8 +218,10 @@ class ServerListener:
 
     def handle_opponent_disconnected(self):
         print("Opponent disconnected. Freezing game.")
+
         if self.game_instance:
             self.game_instance.freeze_game()
+            self.game_instance.number_label.config(text=f"Reconnecting opponent")
 
     def handle_opponent_reconnected(self):
         print("Opponent reconnected. Resuming game.")
