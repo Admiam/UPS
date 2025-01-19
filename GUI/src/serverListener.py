@@ -230,9 +230,6 @@ class ServerListener:
 
     def handle_return_to_waiting(self):
         print("Returning to waiting screen.")
-        # if self.game_instance:
-            # self.game_instance.freeze_game()
-            # self.update_gui_safe(self.return_to_waiting_screen)
         self.game_instance.game_window.destroy()
         if self.waiting_screen and self.waiting_screen.winfo_exists():
             self.waiting_screen.deiconify()
@@ -257,15 +254,6 @@ class ServerListener:
             current_round,
         )
 
-    # def show_waiting_screen(self):
-    #     """Show the waiting screen."""
-    #     self.waiting_screen_active = True
-    #     tk.Label(self.waiting_screen, text="Waiting for other players...", font=("Arial", 16)).pack(pady=20)
-    #
-    #     # Cancel button to close the waiting screen and disconnect
-    #     cancel_button = tk.Button(self.waiting_screen, text="Cancel", command=self.cancel_waiting)
-    #     cancel_button.pack(pady=10)
-
     def show_waiting_screen(self):
         """Safely show the waiting screen."""
         self.waiting_screen.after(0, self._create_waiting_screen)
@@ -279,6 +267,7 @@ class ServerListener:
         # Cancel button to close the waiting screen and disconnect
         cancel_button = tk.Button(self.waiting_screen, text="Cancel", command=self.cancel_waiting)
         cancel_button.pack(pady=10)
+
     def cancel_waiting(self):
         """Cancel the waiting process and clean up."""
         if self.client_socket:
@@ -410,6 +399,7 @@ class ServerListener:
             # print("Reconnect message sent successfully.")
         except Exception as e:
             print(f"Error sending reconnect message: {e}")
+
     def show_reconnecting_screen(self):
         """Display a reconnecting message to the user."""
         messagebox.showinfo("Reconnecting", "Attempting to reconnect... Please wait.")

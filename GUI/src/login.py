@@ -22,8 +22,8 @@ class Login:
         self.ip.grid(row=2, column=1, padx=10, pady=10)
 
         tk.Label(root, text="Port:").grid(row=3, column=0, padx=10, pady=10)
-        self.port = tk.Entry(root)
-        self.port.grid(row=3, column=1, padx=10, pady=10)
+        self.port_input = tk.Entry(root)
+        self.port_input.grid(row=3, column=1, padx=10, pady=10)
 
         # Login button
         self.login_button = tk.Button(root, text="Login", command=self.attempt_login)
@@ -32,9 +32,21 @@ class Login:
     def attempt_login(self):
         # Hard-coded server IP (or you can re-enable server IP entry in the GUI)
         self.server_ip = self.ip.get()
+        port_str = self.port_input.get()
         try:
+            # # Check if `self.port` is an Entry widget or already an int
+            # if isinstance(self.port, tk.Entry):
+            #     port_str = self.port_input.get()  # Get the value from the Entry widget
+            # elif isinstance(self.port, int):
+            #     port_str = str(self.port_input)  # Convert the int to a string for processing
+            #     port_str = self.port_input.get()  # Get the value from the Entry widget
+            #
+            # else:
+            #     messagebox.showerror("Error", "Port input is invalid.")
+            #     return
+
             # Get the port value from the input field
-            port_str = self.port.get()
+            # port_str = self.port.get()
 
             # Verify it is a number
             self.port = int(port_str)
@@ -48,7 +60,8 @@ class Login:
             # Handle invalid input (e.g., not a number or out of range)
             print(f"Error: {e}")
             messagebox.showerror("Invalid Input", "Please enter a valid port number (1–65535).")
-            self.port = 4242  # Reset the port value
+            return
+            # self.port = 4242  # Reset the port value
 
         player_name = self.entry_player.get()
 

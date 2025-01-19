@@ -107,15 +107,6 @@ class Game:
             button.pack(side=tk.LEFT, padx=10)
             self.buttons.append(button)
 
-    # def send_ready_message(self):
-    #     """Notify the server that the player is ready."""
-    #     try:
-    #         message = f"RPS|ready|{self.player_name}"
-    #         self.server.send_to_server(message)
-    #         print(f"Ready message sent: {message}")
-    #     except Exception as e:
-    #         print(f"Failed to send ready message: {e}")
-
     def update_top_bar(self):
         """Update the top bar with scores and round information."""
         if self.game_window and self.game_window.winfo_exists():
@@ -230,13 +221,7 @@ class Game:
 
     def send_choice_to_server(self, choice):
         """Send the player's choice (as an index) to the server."""
-        # choice_string = None
-        # # print(f"Selected choice ID: {choice}")
-        # choices = ["rock", "paper", "scissors"]
-        # if isinstance(choice, int) and 0 <= choice < len(choices):
-        #     choice_string = choices[choice]
 
-        # print(f"Selected choice in string: {choice_string}")
         magic = "RPS|".encode('utf-8')
         command = "game|".encode('utf-8')
         message = choice.encode('utf-8')

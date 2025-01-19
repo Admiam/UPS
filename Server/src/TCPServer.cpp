@@ -169,157 +169,78 @@ void TCPServer::handleClientData(int fd)
     if (ioctl(fd, FIONREAD, &a2read) < 0)
     {
         std::cerr << "ERROR > ioctl failed on fd " << fd << ": " << strerror(errno) << "\n";
-        handleClientDisconnection(fd);
+        // std::string player_id = get_player_id_from_socket(fd);
+        std::string fd_player = get_player_id_from_socket(fd);
+
+        if (!fd_player.empty())
+        {
+            game_server.reset_and_remove_player(fd_player);
+        }
+        std::string error_message = "RPS|error|Player not found;";
+        send(fd, error_message.c_str(), error_message.size(), 0);
+        close(fd); // Disconnect the client
+        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
     }
 
-    if (a2read > 0)
-    {
-        std::vector<char> buffer(a2read);
-        int bytes_received = recv(fd, buffer.data(), a2read, 0);
-
-        if (bytes_received > 0)
+        if (a2read > 0)
         {
-            std::string message(buffer.begin(), buffer.begin() + bytes_received);
-            std::vector<std::string> parts = split(message, '|');
+            std::vector<char> buffer(a2read);
+            int bytes_received = recv(fd, buffer.data(), a2read, 0);
 
-            if (parts.empty() || parts[0] != "RPS")
+            if (bytes_received > 0)
             {
-                std::cerr << "Invalid message format from client on socket " << fd << ".\n";
+                std::string message(buffer.begin(), buffer.begin() + bytes_received);
+                std::vector<std::string> parts = split(message, '|');
 
-                // Notify GameServer to handle disconnection and cleanup
-                std::string player_id = get_player_id_from_socket(fd);
-                if (!player_id.empty())
+                if (parts.empty() || parts[0] != "RPS")
                 {
-                    game_server.handle_invalid_message(player_id);
-                }
+                    std::cerr << "Invalid message format from client on socket " << fd << ".\n";
 
-                handleClientDisconnection(fd);
-                // return; // Exit after handling invalid message
-            }else
-            {
-                std::cout << "CLIENT > " << message << std::endl;
-            }
+                    // Notify GameServer to handle disconnection and cleanup
+                    // std::string player_id = get_player_id_from_socket(fd);
+                    std::string fd_player = get_player_id_from_socket(fd);
 
-
-            if (message == "RPS|ping")
-            {
-                std::string player_id = get_player_id_from_socket(fd);
-                if (player_id.empty())
-                {
-                    std::cerr << "ERROR > Unknown player sending ping from socket " << fd << ".\n";
-                }else
-                {
-                    game_server.update_ping(player_id);
-                    // Respond with a pong
-                    std::string pong_message = "RPS|pong;";
-                    std::cout << "SERVER > send: " << pong_message << "\n";
-
-                    send(fd, pong_message.c_str(), pong_message.size(), 0);
-                    if (game_server.is_player_reconnecting(player_id))
+                    if (!fd_player.empty())
                     {
-                        game_server.handle_reconnection(player_id, fd);
-                        game_server.notify_opponent_reconnected(player_id);
+                        game_server.reset_and_remove_player(fd_player);
                     }
-                    game_server.check_for_inactive_players();
-                }  
-            }
-            else if (parts.size() == 3 && parts[1] == "login")
-            {
-                // Check if parts[2] exists
-                if (parts[2].empty())
-                {
-                    std::cerr << "ERROR > Login message is missing player ID.\n";
-                    std::string error_message = "RPS|error|Missing player ID;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                }else
-                {
-                    // Normalize and validate player ID
-                    std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
-                    if (player_id.empty())
-                    {
-                        std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
-                        std::string error_message = "RPS|error|Invalid player ID;";
-                        send(fd, error_message.c_str(), error_message.size(), 0);
-                        close(fd); // Disconnect the client
-                    }else
-                    {
-                        Player *player = game_server.get_player_by_id(player_id);
-                        if (player)
-                        {
-                            // Check if the player is already in a game or reconnecting
-                            if (player->state == PLAYING || player->state == RECONNECTING || player->state == WAITING || player->state == LOBBY)
-                            {
-                                std::cerr << "ERROR > Player " << player_id << " attempted to log in while already in a game.\n";
-
-                                // Notify the player about the invalid action and disconnect them
-                                std::string error_message = "RPS|error|Invalid login attempt;";
-                                send(fd, error_message.c_str(), error_message.size(), 0);
-                                game_server.remove_player_from_queue(player_id);
-                                game_server.handle_invalid_message(player_id);
-                            }
-                        }else
-                        {
-                            // Proceed with login logic
-                            game_server.add_player_to_queue(player_id, fd);
-                            game_server.update_player_state(player_id, LOBBY); // Set the player's state to LOBBY
-                            socket_to_player_id[fd] = player_id;               // Map socket FD to player ID
-                            std::cout << "LOBBY > Player " << player_id << " logged in successfully.\n";
-                        }
-                    }
-                }     
-            }
-            else if (parts.size() > 1 && parts[1] == "lobby")
-            {
-                // Retrieve the player_id using the socket FD
-                auto it = socket_to_player_id.find(fd);
-                if (it == socket_to_player_id.end())
-                {
-                    std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
-                    std::string error_message = "RPS|error|Invalid socket association;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                }
-
-                std::string player_id = it->second;
-
-                // Retrieve the Player object
-                Player *player = game_server.get_player_by_id(player_id);
-                if (!player)
-                {
-                    std::cerr << "ERROR > Player ID " << player_id << " does not exist.\n";
                     std::string error_message = "RPS|error|Player not found;";
                     send(fd, error_message.c_str(), error_message.size(), 0);
-                    game_server.remove_player_from_queue(player_id);
-                    close(fd); // Disconnect the client
-                }
-
-                // Check the player's current state
-                if (player->state == RECONNECTING || parts.size() == 3)
-                {
-                    game_server.add_player_to_queue(player_id, fd);
-                    player->state = LOBBY; // Update the player's state
-                    std::cout << "INFO > Player " << player_id << " has returned to the lobby.\n";
+                    close(fd);                 // Close the socket
+                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    // handleClientDisconnection(fd);
+                    // return; // Exit after handling invalid message
                 }
                 else
                 {
-                    std::cerr << "ERROR > Player " << player_id << " attempted invalid lobby action while in state " << player->state << ".\n";
-                    std::string error_message = "RPS|error|Invalid action;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    game_server.handle_invalid_message(player_id);
+                    std::cout << "CLIENT > " << message << std::endl;
                 }
-            }
-            else if (parts.size() == 3 && parts[1] == "ready")
-            {
-                // Retrieve the player_id using the socket FD
-                auto it = socket_to_player_id.find(fd);
-                if (it == socket_to_player_id.end())
+
+                if (message == "RPS|ping")
                 {
-                    std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
-                    std::string error_message = "RPS|error|Invalid socket association;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                }else
+                    std::string player_id = get_player_id_from_socket(fd);
+                    if (player_id.empty())
+                    {
+                        std::cerr << "ERROR > Unknown player sending ping from socket " << fd << ".\n";
+                        std::string error_message = "RPS|error|Unknown player;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd); // Disconnect the unidentified client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        game_server.update_ping(player_id);
+                        std::string pong_message = "RPS|pong;";
+                        send(fd, pong_message.c_str(), pong_message.size(), 0);
+                        if (game_server.is_player_reconnecting(player_id))
+                        {
+                            game_server.handle_reconnection(player_id, fd);
+                            game_server.notify_opponent_reconnected(player_id);
+                        }
+                        game_server.check_for_inactive_players();
+                    }
+                }
+                else if (parts.size() == 3 && parts[1] == "login")
                 {
                     // Check if parts[2] exists
                     if (parts[2].empty())
@@ -328,7 +249,9 @@ void TCPServer::handleClientData(int fd)
                         std::string error_message = "RPS|error|Missing player ID;";
                         send(fd, error_message.c_str(), error_message.size(), 0);
                         close(fd); // Disconnect the client
-                    }else
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
                     {
                         // Normalize and validate player ID
                         std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
@@ -338,37 +261,324 @@ void TCPServer::handleClientData(int fd)
                             std::string error_message = "RPS|error|Invalid player ID;";
                             send(fd, error_message.c_str(), error_message.size(), 0);
                             close(fd); // Disconnect the client
-                        }else
+                            FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+
+                        }
+                        else
+                        {
+                            std::string fd_player = get_player_id_from_socket(fd);
+                            Player *player = game_server.get_player_by_id(fd_player);
+                            if (player)
+                            {
+                                // Check if the player is already in a game or reconnecting
+                                if (player->state == PLAYING || player->state == RECONNECTING || player->state == WAITING || player->state == LOBBY || player_id != fd_player)
+                                {
+                                    std::cerr << "ERROR > Player " << fd_player << " is already in a game or reconnecting.\n";
+
+                                    // Notify the player about the invalid action and disconnect them
+                                    std::string error_message = "RPS|error|Invalid login attempt;";
+                                    send(fd, error_message.c_str(), error_message.size(), 0);
+                                    // game_server.remove_player_from_queue(player_id);
+                                    game_server.reset_and_remove_player(fd_player);
+                                    // game_server.handle_invalid_message(player_id);
+                                    close(fd);                 // Disconnect the client
+                                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                                }
+                            }
+                            else
+                            {
+                                // Proceed with login logic
+                                game_server.update_player_state(player_id, LOBBY); // Set the player's state to LOBBY
+                                game_server.add_player_to_queue(player_id, fd);
+                                socket_to_player_id[fd] = player_id;               // Map socket FD to player ID
+                                std::cout << "LOBBY > Player " << player_id << " logged in successfully.\n";
+                            }
+                        }
+                    }
+                }
+                else if (parts.size() == 3 && parts[1] == "ready")
+                {
+                    // Retrieve the player_id using the socket FD
+                    auto it = socket_to_player_id.find(fd);
+                    if (it == socket_to_player_id.end())
+                    {
+                        std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd); // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        // Check if parts[2] exists
+                        if (parts[2].empty())
+                        {
+                            std::cerr << "ERROR > Login message is missing player ID.\n";
+                            std::string error_message = "RPS|error|Missing player ID;";
+                            send(fd, error_message.c_str(), error_message.size(), 0);
+                            std::string player_id = get_player_id_from_socket(fd);
+                            if (!player_id.empty())
+                            {
+                                game_server.reset_and_remove_player(player_id);
+                            }
+                            close(fd); // Disconnect the client
+                            FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                        }
+                        else
+                        {
+                            // Normalize and validate player ID
+                            std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
+                            if (player_id.empty())
+                            {
+                                std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
+                                std::string error_message = "RPS|error|Invalid player ID;";
+                                send(fd, error_message.c_str(), error_message.size(), 0);
+                                close(fd); // Disconnect the client
+                                FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                            }
+                            else
+                            {
+                                // Retrieve the Player object
+                                std::string fd_player = get_player_id_from_socket(fd);
+                                Player *player = game_server.get_player_by_id(fd_player);
+                                if (!player)
+                                {
+                                    std::cerr << "ERROR > Player ID " << player_id << " does not exist.\n";
+                                    std::string error_message = "RPS|error|Player not found;";
+                                    send(fd, error_message.c_str(), error_message.size(), 0);
+                                    std::string player_id = get_player_id_from_socket(fd);
+                                    if (!player_id.empty())
+                                    {
+                                        game_server.reset_and_remove_player(player_id);
+                                    }
+                                    close(fd); // Disconnect the client
+                                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                                }
+                                else if (player->state == LOBBY && player_id == fd_player)
+                                {
+                                    game_server.handle_ready_message(player_id);
+                                    game_server.update_player_state(player_id, PLAYING); // Set the player's state to LOBBY
+                                    std::cout << "INFO > Player " << player_id << " is ready.\n";
+                                }
+                                else
+                                {
+                                    std::cerr << "ERROR > Player " << fd_player << " attempted invalid ready action while in state " << player->state << ".\n";
+                                    std::string error_message = "RPS|error|Invalid action;";
+                                    send(fd, error_message.c_str(), error_message.size(), 0);
+                                    game_server.reset_and_remove_player(fd_player);
+                                    close(fd); // Disconnect the client
+                                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+
+                                    // game_server.handle_invalid_message(player_id);
+                                }
+                            }
+                        }
+                    }
+                }
+                else if (parts.size() == 3 && parts[1] == "game")
+                {
+                    // Retrieve the player_id using the socket FD
+                    auto it = socket_to_player_id.find(fd);
+                    if (it == socket_to_player_id.end())
+                    {
+                        std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd); // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        std::string player_id = it->second;
+
+                        // Retrieve the Player object
+                        std::string fd_player = get_player_id_from_socket(fd);
+                        Player *player = game_server.get_player_by_id(fd_player);
+                        if (!player)
+                        {
+                            std::cout << "ERROR > Player ID " << player_id << " does not exist.\n";
+                            std::string error_message = "RPS|error|Player not found;";
+                            send(fd, error_message.c_str(), error_message.size(), 0);
+                            close(fd); // Disconnect the client
+                            FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                        }
+                        else
+                        {
+                            try
+                            {
+                                std::string choice = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
+
+                                if (player->state == PLAYING && (choice == "rock" || choice == "paper" || choice == "scissors") && player_id == fd_player)
+                                {
+                                    choice = parts[2];
+                                    std::string player_id = socket_to_player_id[fd];
+                                    std::string group_id = game_server.get_player_group(player_id);
+
+                                    if (game_server.register_choice(group_id, player_id, choice))
+                                    {
+                                        game_server.process_group_round(group_id);
+                                    }
+                                }
+                                else
+                                {
+                                    std::cerr << "ERROR > Player " << fd_player << " attempted invalid game action while in state " << player->state << ".\n";
+                                    std::string error_message = "RPS|error|Invalid action;";
+                                    send(fd, error_message.c_str(), error_message.size(), 0);
+                                    game_server.reset_and_remove_player(fd_player);
+                                    close(fd); // Disconnect the client
+                                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                                }
+                            }
+                            catch (const std::exception &e)
+                            {
+                                std::cerr << "ERROR > Exception caught: " << e.what() << "\n";
+                                std::string error_message = "RPS|error|Invalid action;";
+                                send(fd, error_message.c_str(), error_message.size(), 0);
+                                game_server.reset_and_remove_player(fd_player);
+                                close(fd); // Disconnect the client
+                                FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                            }
+                        }
+                    }
+                }
+                else if (parts.size() == 3 && parts[1] == "return_to_lobby")
+                {
+                    // Retrieve the player_id using the socket FD
+                    auto it = socket_to_player_id.find(fd);
+                    if (it == socket_to_player_id.end())
+                    {
+                        std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd); // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        // Normalize and validate player ID
+                        std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
+                        if (player_id.empty())
+                        {
+                            std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
+                            std::string error_message = "RPS|error|Invalid player ID;";
+                            send(fd, error_message.c_str(), error_message.size(), 0);
+                            close(fd); // Disconnect the client
+                            FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                        }
+                        else
+                        {
+                            std::string fd_player = get_player_id_from_socket(fd);
+                            Player *player = game_server.get_player_by_id(fd_player);
+                            std::cout << "Player ID: " << player_id << " Player FD: " << fd_player << " current round: " << game_server.get_current_round_for_player(player_id) << "\n";
+                            if (player->state == PLAYING && player_id == fd_player && game_server.get_current_round_for_player(player_id) == 11)
+                            {
+                                game_server.handle_return_to_lobby(player_id);
+                                game_server.update_player_state(player_id, LOBBY); // Set the player's state to LOBBY
+                                // Send confirmation to the client
+                                std::string confirmation_msg = "RPS|return_to_waiting;";
+                                send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
+                                std::cout << "SERVER > send: " << confirmation_msg << "\n";
+                            }
+                            else
+                            {
+                                std::cerr << "ERROR > Player " << fd_player << " attempted invalid return to lobby action while in state " << player->state << ".\n";
+                                std::string error_message = "RPS|error|Invalid action;";
+                                send(fd, error_message.c_str(), error_message.size(), 0);
+                                game_server.reset_and_remove_player(fd_player);
+                                close(fd); // Disconnect the client
+                                FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                            }
+                        }
+                    }
+                }
+                else if (parts.size() == 3 && parts[1] == "reconnect")
+                {
+                    // Retrieve the player_id using the socket FD
+                    auto it = socket_to_player_id.find(fd);
+                    if (it == socket_to_player_id.end())
+                    {
+                        std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd); // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else if (parts[2].empty())
+                    {
+                        std::cerr << "ERROR > Login message is missing player ID.\n";
+                        std::string error_message = "RPS|error|Missing player ID;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        std::string player_id = get_player_id_from_socket(fd);
+                        if (!player_id.empty())
+                        {
+                            game_server.reset_and_remove_player(player_id);
+                        }
+                        close(fd); // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        // Normalize and validate player ID
+                        std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
+                        if (player_id.empty())
+                        {
+                            std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
+                            std::string error_message = "RPS|error|Invalid player ID;";
+                            send(fd, error_message.c_str(), error_message.size(), 0);
+                            close(fd); // Disconnect the client
+                            FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                        }
+                        else
                         {
                             // Retrieve the Player object
-                            Player *player = game_server.get_player_by_id(player_id);
+                            std::string fd_player = get_player_id_from_socket(fd);
+                            Player *player = game_server.get_player_by_id(fd_player);
                             if (!player)
                             {
                                 std::cerr << "ERROR > Player ID " << player_id << " does not exist.\n";
                                 std::string error_message = "RPS|error|Player not found;";
                                 send(fd, error_message.c_str(), error_message.size(), 0);
-                                
+                                std::string player_id = get_player_id_from_socket(fd);
+                                if (!player_id.empty())
+                                {
+                                    game_server.reset_and_remove_player(player_id);
+                                }
                                 close(fd); // Disconnect the client
-                            }else if (player->state == LOBBY)
+                                FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                            }
+                            else if (player->state == RECONNECTING && player_id == fd_player)
                             {
-                                game_server.handle_ready_message(player_id);
+                                std::string group_id = game_server.get_player_group(player_id);
+                                // Update the socket mapping for the player
+                                socket_to_player_id[fd] = player_id;
+
+                                // Notify the GameServer about the reconnection
+                                game_server.handle_reconnection(player_id, fd);
+
+                                // Respond to the client
+                                // std::string success_msg = "RPS|opponent_reconnected;";
+                                // send(fd, success_msg.c_str(), success_msg.size(), 0);
+                                game_server.notify_opponent_reconnected(player_id);
                                 game_server.update_player_state(player_id, PLAYING); // Set the player's state to LOBBY
-                                std::cout << "INFO > Player " << player_id << " is ready.\n";
+                                std::cout << "RECONNECT > player " << player_id << " with new socket FD: " << fd << "\n";
                             }
                             else
                             {
-                                std::cerr << "ERROR > Player " << player_id << " attempted invalid ready action while in state " << player->state << ".\n";
+                                std::cerr << "ERROR > Player " << fd_player << " attempted invalid reconnection action while in state " << player->state << ".\n";
                                 std::string error_message = "RPS|error|Invalid action;";
                                 send(fd, error_message.c_str(), error_message.size(), 0);
-                                game_server.handle_invalid_message(player_id);
+                                game_server.reset_and_remove_player(fd_player);
+                                close(fd); // Disconnect the client
+                                FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
                             }
                         }
                     }
                 }
             }
-            else if (parts.size() == 3 && parts[1] == "game")
+            else
             {
-                // Retrieve the player_id using the socket FD
+                std::cerr << "recv failed on fd " << fd << ": " << strerror(errno) << "\n";
+                // handleClientDisconnection(fd);
                 auto it = socket_to_player_id.find(fd);
                 if (it == socket_to_player_id.end())
                 {
@@ -376,154 +586,16 @@ void TCPServer::handleClientData(int fd)
                     std::string error_message = "RPS|error|Invalid socket association;";
                     send(fd, error_message.c_str(), error_message.size(), 0);
                     close(fd); // Disconnect the client
-                }else
+                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                }
+                else
                 {
                     std::string player_id = it->second;
-
-                    // Retrieve the Player object
-                    Player *player = game_server.get_player_by_id(player_id);
-                    if (!player)
-                    {
-                        std::cout << "ERROR > Player ID " << player_id << " does not exist.\n";
-                        std::string error_message = "RPS|error|Player not found;";
-                        send(fd, error_message.c_str(), error_message.size(), 0);
-                        close(fd); // Disconnect the client
-                    }else
-                    {
-                        std::string choice = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
-
-                        if (player->state == PLAYING && (choice == "rock" || choice == "paper" || choice == "scissors"))
-                        {
-                            choice = parts[2];
-                            std::string player_id = socket_to_player_id[fd];
-                            std::string group_id = game_server.get_player_group(player_id);
-
-                            if (game_server.register_choice(group_id, player_id, choice))
-                            {
-                                game_server.process_group_round(group_id);
-                            }
-                        }
-                        else
-                        {
-                            std::cerr << "ERROR > Player " << player_id << " attempted invalid game action while in state " << player->state << ".\n";
-                            std::string error_message = "RPS|error|Invalid action;";
-                            send(fd, error_message.c_str(), error_message.size(), 0);
-                            game_server.handle_invalid_message(player_id);
-                        }
-                    }
+                    game_server.reset_and_remove_player(player_id);
+                    close(fd); // Disconnect the client
+                    FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
                 }
             }
-            else if (parts.size() == 3 && parts[1] == "return_to_lobby")
-            {
-                // Retrieve the player_id using the socket FD
-                auto it = socket_to_player_id.find(fd);
-                if (it == socket_to_player_id.end())
-                {
-                    std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
-                    std::string error_message = "RPS|error|Invalid socket association;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                }else
-                {
-                    // Normalize and validate player ID
-                    std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
-                    if (player_id.empty())
-                    {
-                        std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
-                        std::string error_message = "RPS|error|Invalid player ID;";
-                        send(fd, error_message.c_str(), error_message.size(), 0);
-                        close(fd); // Disconnect the client
-                    }else
-                    {
-                        Player *player = game_server.get_player_by_id(player_id);
-
-                        if (player->state == PLAYING)
-                        {
-                            game_server.handle_return_to_lobby(player_id);
-                            game_server.update_player_state(player_id, LOBBY); // Set the player's state to LOBBY
-                            // Send confirmation to the client
-                            std::string confirmation_msg = "RPS|return_to_waiting;";
-                            send(fd, confirmation_msg.c_str(), confirmation_msg.size(), 0);
-                            std::cout << "SERVER > send: " << confirmation_msg << "\n";
-                        }
-                        else
-                        {
-                            std::cerr << "ERROR > Player " << player_id << " attempted invalid return to lobby action while in state " << player->state << ".\n";
-                            std::string error_message = "RPS|error|Invalid action;";
-                            send(fd, error_message.c_str(), error_message.size(), 0);
-                            game_server.handle_invalid_message(player_id);
-                        }
-                    }
-                }
-            }
-            else if (parts.size() == 3 && parts[1] == "reconnect")
-            {
-                // Retrieve the player_id using the socket FD
-                auto it = socket_to_player_id.find(fd);
-                if (it == socket_to_player_id.end())
-                {
-                    std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
-                    std::string error_message = "RPS|error|Invalid socket association;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                }else if (parts[2].empty())
-                {
-                    std::cerr << "ERROR > Login message is missing player ID.\n";
-                    std::string error_message = "RPS|error|Missing player ID;";
-                    send(fd, error_message.c_str(), error_message.size(), 0);
-                    close(fd); // Disconnect the client
-                } else
-                {
-                    // Normalize and validate player ID
-                    std::string player_id = game_server.normalize_string(game_server.trim(game_server.extract_payload(parts[2])));
-                    if (player_id.empty())
-                    {
-                        std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
-                        std::string error_message = "RPS|error|Invalid player ID;";
-                        send(fd, error_message.c_str(), error_message.size(), 0);
-                        close(fd); // Disconnect the client
-                    } else
-                    {
-                        // Retrieve the Player object
-                        Player *player = game_server.get_player_by_id(player_id);
-                        if (!player)
-                        {
-                            std::cerr << "ERROR > Player ID " << player_id << " does not exist.\n";
-                            std::string error_message = "RPS|error|Player not found;";
-                            send(fd, error_message.c_str(), error_message.size(), 0);
-                            close(fd); // Disconnect the client
-                        }else if (player->state == RECONNECTING)
-                        {
-                            std::string group_id = game_server.get_player_group(player_id);
-                            // Update the socket mapping for the player
-                            socket_to_player_id[fd] = player_id;
-
-                            // Notify the GameServer about the reconnection
-                            game_server.handle_reconnection(player_id, fd);
-
-                            // Respond to the client
-                            // std::string success_msg = "RPS|opponent_reconnected;";
-                            // send(fd, success_msg.c_str(), success_msg.size(), 0);
-                            game_server.notify_opponent_reconnected(player_id);
-                            game_server.update_player_state(player_id, PLAYING); // Set the player's state to LOBBY
-                            std::cout << "RECONNECT > player " << player_id << " with new socket FD: " << fd << "\n";
-                        }
-                        else
-                        {
-                            std::cerr << "ERROR > Player " << player_id << " attempted invalid reconnection action while in state " << player->state << ".\n";
-                            std::string error_message = "RPS|error|Invalid action;";
-                            send(fd, error_message.c_str(), error_message.size(), 0);
-                            game_server.handle_invalid_message(player_id);
-                        }
-                    }
-                }
-            }
-        }
-        else
-        {
-            std::cerr << "recv failed on fd " << fd << ": " << strerror(errno) << "\n";
-            handleClientDisconnection(fd);
-        }
     }
     // else
     // {
