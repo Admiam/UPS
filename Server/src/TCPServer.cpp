@@ -260,6 +260,8 @@ void TCPServer::handleClientData(int fd)
                             std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
                             std::string error_message = "RPS|error|Invalid player ID;";
                             send(fd, error_message.c_str(), error_message.size(), 0);
+                            std::string fd_player = get_player_id_from_socket(fd);
+                            game_server.reset_and_remove_player(fd_player);
                             close(fd); // Disconnect the client
                             FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
 
@@ -332,6 +334,8 @@ void TCPServer::handleClientData(int fd)
                             {
                                 std::cerr << "ERROR > Invalid or empty player ID provided in login message.\n";
                                 std::string error_message = "RPS|error|Invalid player ID;";
+                                std::string fd_player = get_player_id_from_socket(fd);
+                                game_server.reset_and_remove_player(fd_player);
                                 send(fd, error_message.c_str(), error_message.size(), 0);
                                 close(fd); // Disconnect the client
                                 FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
@@ -577,8 +581,8 @@ void TCPServer::handleClientData(int fd)
                 }
                 else
                 {
-                    auto it = socket_to_player_id.find(fd);
-                    if (it == socket_to_player_id.end())
+                    std::string player_id = get_player_id_from_socket(fd);
+                    if (player_id.empty())
                     {
                         std::cerr << "ERROR > Socket FD " << fd << " invalid message.\n";
                         std::string error_message = "RPS|error|Invalid socket association;";
@@ -588,7 +592,7 @@ void TCPServer::handleClientData(int fd)
                     }
                     else
                     {
-                        std::string player_id = it->second;
+                        // std::string player_id = it->second;
                         std::string error_message = "RPS|error|Invalid socket association;";
                         send(fd, error_message.c_str(), error_message.size(), 0);
                         game_server.reset_and_remove_player(player_id);
@@ -619,10 +623,19 @@ void TCPServer::handleClientData(int fd)
                 }
             }
     }
-    // else
-    // {
-    //     handleClientDisconnection(fd);
-    // }
+    else
+    {
+        std::string fd_player = get_player_id_from_socket(fd);
+
+        if (!fd_player.empty())
+        {
+            game_server.reset_and_remove_player(fd_player);
+        }
+        std::string error_message = "RPS|error|Player not found;";
+        send(fd, error_message.c_str(), error_message.size(), 0);
+        close(fd);                 // Disconnect the client
+        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set    
+    }
 }
 
 void TCPServer::handleClientDisconnection(int fd)

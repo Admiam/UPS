@@ -3,6 +3,7 @@ import tkinter as tk
 from tkinter import messagebox
 from connect import connect_to_server  # Import the connect function
 from serverListener import ServerListener  # Import the centralized ServerListener
+import sys
 
 
 class Login:
@@ -28,7 +29,15 @@ class Login:
         # Login button
         self.login_button = tk.Button(root, text="Login", command=self.attempt_login)
         self.login_button.grid(row=4, column=0, columnspan=2, pady=10)
+        self.root.protocol("WM_DELETE_WINDOW", self.cleanup)
 
+
+    def cleanup(self):
+        """Clean up resources when the game window is closed."""
+        self.root.destroy()  # Destroy the game window
+        print("Exiting program...")
+        # Delay the exit to ensure threads have enough time to terminate gracefully
+        self.root.after(100, sys.exit)
     def attempt_login(self):
         # Hard-coded server IP (or you can re-enable server IP entry in the GUI)
         self.server_ip = self.ip.get()

@@ -5,6 +5,7 @@ import tkinter as tk
 import socket
 import time
 import struct
+import sys
 
 
 class ServerListener:
@@ -78,9 +79,16 @@ class ServerListener:
         """Handle cleanup when the window is closed."""
         self.ping_active = False
         self.is_reconnecting = False
-        if self.client_socket:
-            self.client_socket.close()
-        self.update_gui_safe(self.waiting_screen.destroy)
+        try:
+            self.notify_server_lobby(self.player_name)  # Notify server
+            self.disconnect_client()  # Disconnect the socket
+        except Exception as e:
+            print(f"Cleanup error: {e}")
+        finally:
+            self.waiting_screen.destroy()  # Destroy the game window
+            print("Exiting program...")
+            # Delay the exit to ensure threads have enough time to terminate gracefully
+            self.waiting_screen.after(100, sys.exit)
 
     def register_game_instance(self, game_window):
         """Register the game instance for updates."""
