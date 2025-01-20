@@ -324,7 +324,7 @@ class ServerListener:
     def notify_server_lobby(self, player_name):
         """Notify the server that the player is returning to the lobby."""
         try:
-            self.client_socket.sendall(f"RPS|delete")
+            self.client_socket.sendall(b"RPS|delete")
         except Exception as e:
             print(f"Failed to notify server: {e}")
 
