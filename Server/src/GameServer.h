@@ -10,6 +10,7 @@
 #include "GameLogic.h"
 #include <set>
 #include <algorithm>
+#include <unistd.h>
 
 enum PlayerState
 {
@@ -117,8 +118,9 @@ public:
     bool remove_player_from_queue(const std::string &player_id);
     void reset_and_remove_player(const std::string &player_id);
     int get_current_round_for_player(const std::string &player_id);
+    int get_socket_fd_for_disconnected_player(const std::string &player_id);
 
-    private : 
+private: 
     std::unordered_map<std::string, Group> groups;
     std::unordered_map<std::string, Player *> player_directory;
     std::queue<std::pair<std::string, int>> player_queue;

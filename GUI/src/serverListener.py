@@ -130,27 +130,39 @@ class ServerListener:
 
     def route_server_message(self, message):
         """Route the server message to the appropriate handler."""
+        parts = message.split("|")
+        if not parts:
+            print("Invalid message format: Empty message.")
+            self.disconnect_client("Invalid message received")  # Disconnect with error
+            return
+        message_type = parts[0]
+
         if message == "connected":
             self.handle_connected()
-        elif message.startswith("start"):
-            self.handle_game_start("Group")
-        elif "|" in message and message.startswith("Group"):
+        elif message_type == "start":
+            if len(parts) == 1:
+                self.handle_game_start("Group")
+        elif message_type.startswith("Group") and len(parts) >= 2:
             self.handle_group_assignment(message)
         elif message.startswith("reconnect|success"):
             self.handle_reconnection(message)
-        elif message.startswith("score|"):
-            self.handle_score_update(message)
-        elif message.startswith("result|"):
-            self.handle_round_result(message)
-        elif message.startswith("opponent_disconnected"):
+        elif message_type == "score" and len(parts) == 3:
+            try:
+                player_score = int(parts[1])
+                opponent_score = int(parts[2])
+                self.handle_score_update(message)
+            except ValueError:
+                print("Invalid score values.")
+        elif message_type == "result" and len(parts) == 2:
+            self.handle_round_result(parts[1])
+        elif message_type == "opponent_disconnected":
             self.handle_opponent_disconnected()
-        elif message.startswith("opponent_reconnected"):
+        elif message_type == "opponent_reconnected":
             self.handle_opponent_reconnected()
-        elif message.startswith("return_to_waiting"):
+        elif message_type == "return_to_waiting":
             self.handle_return_to_waiting()
-        elif message.startswith("error"):
-            index, error_message = message.split("|", 1)
-            self.disconnect_client(error_message)  # Disconnect with error
+        elif message_type == "error" and len(parts) == 2:
+            self.disconnect_client(parts[1])
         else:
             print(f"Unhandled message : ", message)
             self.disconnect_client("Invalid message received")  # Disconnect with error
@@ -213,8 +225,7 @@ class ServerListener:
             self.start_game(group_id, player_score, opponent_score, current_round)
 
     def handle_round_result(self, message):
-        result = message.split("|")[1]
-        print(f"Round result: {result}")
+        print(f"Round result: {message}")
 
     def handle_opponent_disconnected(self):
         print("Opponent disconnected. Freezing game.")
@@ -417,3 +428,4 @@ class ServerListener:
 
         # Redirect to the login screen
         # self.update_gui_safe(self.show_login_window)
+

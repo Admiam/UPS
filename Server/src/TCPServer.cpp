@@ -494,16 +494,17 @@ void TCPServer::handleClientData(int fd)
                 else if (parts.size() == 3 && parts[1] == "reconnect")
                 {
                     // Retrieve the player_id using the socket FD
-                    auto it = socket_to_player_id.find(fd);
-                    if (it == socket_to_player_id.end())
-                    {
-                        std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
-                        std::string error_message = "RPS|error|Invalid socket association;";
-                        send(fd, error_message.c_str(), error_message.size(), 0);
-                        close(fd); // Disconnect the client
-                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
-                    }
-                    else if (parts[2].empty())
+                    // auto it = socket_to_player_id.find(fd);
+                    // if (it == socket_to_player_id.end())
+                    // {
+                    //     std::cerr << "ERROR > Socket FD " << fd << " is not associated with any player.\n";
+                    //     std::string error_message = "RPS|error|Invalid socket association;";
+                    //     send(fd, error_message.c_str(), error_message.size(), 0);
+                    //     close(fd); // Disconnect the client
+                    //     FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    // }
+                    // else 
+                    if (parts[2].empty())
                     {
                         std::cerr << "ERROR > Login message is missing player ID.\n";
                         std::string error_message = "RPS|error|Missing player ID;";
@@ -531,8 +532,8 @@ void TCPServer::handleClientData(int fd)
                         else
                         {
                             // Retrieve the Player object
-                            std::string fd_player = get_player_id_from_socket(fd);
-                            Player *player = game_server.get_player_by_id(fd_player);
+                            // std::string fd_player = get_player_id_from_socket(fd);
+                            Player *player = game_server.get_player_by_id(player_id);
                             if (!player)
                             {
                                 std::cerr << "ERROR > Player ID " << player_id << " does not exist.\n";
@@ -546,7 +547,7 @@ void TCPServer::handleClientData(int fd)
                                 close(fd); // Disconnect the client
                                 FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
                             }
-                            else if (player->state == RECONNECTING && player_id == fd_player)
+                            else if (player->state == RECONNECTING && player_id == player_id)
                             {
                                 std::string group_id = game_server.get_player_group(player_id);
                                 // Update the socket mapping for the player
@@ -564,10 +565,10 @@ void TCPServer::handleClientData(int fd)
                             }
                             else
                             {
-                                std::cerr << "ERROR > Player " << fd_player << " attempted invalid reconnection action while in state " << player->state << ".\n";
+                                std::cerr << "ERROR > Player " << player_id << " attempted invalid reconnection action while in state " << player->state << ".\n";
                                 std::string error_message = "RPS|error|Invalid action;";
                                 send(fd, error_message.c_str(), error_message.size(), 0);
-                                game_server.reset_and_remove_player(fd_player);
+                                game_server.reset_and_remove_player(player_id);
                                 close(fd); // Disconnect the client
                                 FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
                             }

@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 #include <iomanip>
+#include <unistd.h>
 
 void GameServer::add_player_to_queue(const std::string &player_id, int socket_fd)
 {
@@ -142,6 +143,7 @@ void GameServer::attempt_to_form_group()
 
     player_directory[player1.first] = &groups[group_id].players[0];
     player_directory[player2.first] = &groups[group_id].players[1];
+
 
     send(player1.second, message_to_player1.c_str(), message_to_player1.size(), 0);
     std::cout << "SERVER SENT > " << message_to_player1 << "\n";
@@ -843,48 +845,6 @@ void GameServer::check_for_inactive_players()
     }
 }
 
-// void GameServer::handle_invalid_message(const std::string &player_id)
-// {
-//     std::cout << "INVALID MESSAGE > Disconnecting player " << player_id << ".\n";
-
-//     // Find the group and notify the opponent
-//     std::string group_id = get_player_group(player_id);
-//     if (!group_id.empty())
-//     {
-//         Group &group = groups[group_id];
-
-//         // Notify the opponent to return to the lobby
-//         for (const auto &player : group.players)
-//         {
-//             if (player.player_id != player_id)
-//             {
-//                 int opponent_fd = get_socket_fd_for_player(player.player_id);
-//                 if (opponent_fd != -1)
-//                 {
-//                     std::string msg = "RPS|return_to_waiting;";
-//                     send(opponent_fd, msg.c_str(), msg.size(), 0);
-//                     std::cout << "NOTIFY > Opponent " << player.player_id << " sent to lobby.\n";
-//                 }
-//             }
-//         }
-
-//         // Remove the player from the group
-//         group.remove_player(player_id);
-//         std::cout << "GROUP CLEANUP > Removed player " << player_id << " from group " << group_id << ".\n";
-
-//         // Remove the group if empty
-//         if (group.players.empty())
-//         {
-//             groups.erase(group_id);
-//             std::cout << "GROUP CLEANUP > Group " << group_id << " has been removed.\n";
-//         }
-//     }
-//     else
-//     {
-//         std::cerr << "ERROR > Player " << player_id << " is not part of any group.\n";
-//     }
-// }
-
 Player *GameServer::get_player_by_id(const std::string &player_id)
 {
     // First check in groups for the player
@@ -1044,4 +1004,19 @@ int GameServer::get_current_round_for_player(const std::string &player_id)
 
     std::cerr << "ERROR > Player " << player_id << " is not found in any group.\n";
     return -1; // Return -1 or another indicative value if player is not found
+}
+
+int GameServer::get_socket_fd_for_disconnected_player(const std::string &player_id)
+{
+    auto it = disconnected_players.find(player_id);
+    if (it != disconnected_players.end())
+    {
+        // Assuming each DisconnectedPlayerInfo structure has a socket_fd field
+        return get_socket_fd_for_player(it->first);
+    }
+    else
+    {
+        std::cerr << "ERROR > Player " << player_id << " is not found in the disconnected players list.\n";
+        return -1; // Return -1 or another indicative value if player is not found
+    }
 }
