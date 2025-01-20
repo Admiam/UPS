@@ -575,6 +575,27 @@ void TCPServer::handleClientData(int fd)
                         }
                     }
                 }
+                else
+                {
+                    auto it = socket_to_player_id.find(fd);
+                    if (it == socket_to_player_id.end())
+                    {
+                        std::cerr << "ERROR > Socket FD " << fd << " invalid message.\n";
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        close(fd);                 // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                    else
+                    {
+                        std::string player_id = it->second;
+                        std::string error_message = "RPS|error|Invalid socket association;";
+                        send(fd, error_message.c_str(), error_message.size(), 0);
+                        game_server.reset_and_remove_player(player_id);
+                        close(fd);                 // Disconnect the client
+                        FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
+                    }
+                }
             }
             else
             {
