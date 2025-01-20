@@ -586,7 +586,7 @@ void TCPServer::handleClientData(int fd)
                     {
                         std::cerr << "ERROR > Socket FD " << fd << " invalid message.\n";
                         std::string error_message = "RPS|error|Invalid socket association;";
-                        socket_to_player_id[fd] = nullptr; // Map socket FD to player ID
+                        socket_to_player_id[fd] = ""; // Map socket FD to player ID
                         send(fd, error_message.c_str(), error_message.size(), 0);
                         close(fd);                 // Disconnect the client
                         FD_CLR(fd, &client_socks); // IMPORTANT: Remove the socket from the set
