@@ -926,10 +926,12 @@ void GameServer::reset_and_remove_player(const std::string &player_id)
     std::string opponent_id;
 
     // Remove from the player queue
-    if (remove_player_from_queue(player_id))
-    {
-        return;       
-    }
+    // if (remove_player_from_queue(player_id))
+    // {
+    //     return;       
+    // }
+    remove_player_from_queue(player_id);
+    player_last_ping.erase(player_id);
 
     std::string group_id = get_player_group(player_id);
     if (group_id.empty())
