@@ -103,40 +103,6 @@ Komunikační protokol je navržen tak, aby podporoval různé fáze hry a přec
     \label{fig:protocol}
 \end{figure}
 
-Diagram zahrnuje následující stavy a přechody:
 
-\begin{itemize}
-    \item \textbf{LOGIN}: Tento stav nastává při přihlášení hráče do systému. Hráč může odeslat zprávu pro přihlášení, opuštění nebo opětovné připojení k dříve přerušené hře. Příklady zpráv:
-    \begin{itemize}
-        \item \texttt{<prefix>;login;<totalLength>;<playerID>} – přihlášení hráče s identifikátorem \texttt{<playerID>}.
-        \item \texttt{<prefix>;leave;<totalLength>;<playerID>} – opuštění lobby hráčem.
-    \end{itemize}
-
-    \item \textbf{LOBBY}: Po úspěšném přihlášení se hráč nachází v lobby, kde čeká na připojení dalších hráčů. Možné akce zahrnují připojení k existující hře nebo opuštění lobby. Příklady zpráv:
-    \begin{itemize}
-        \item \texttt{<prefix>;join;<totalLength>;<playerID>;<gameID>} – připojení hráče ke hře s identifikátorem \texttt{<gameID>}.
-        \item \texttt{<prefix>;fetch;<totalLength>;<playerID>} – načtení aktuálních informací o lobby.
-    \end{itemize}
-
-    \item \textbf{GAME}: Jakmile je hra zahájena, hráči vstoupí do herního režimu, kde odesílají své tahy a server vyhodnocuje výsledky jednotlivých kol. Po ukončení hry je možné zaslat zprávu o jejím dokončení nebo požádat o odvetu. Příklady zpráv:
-    \begin{itemize}
-        \item \texttt{<prefix>;roundResult;<totalLength>;<playerID>;<gameID>;<playerMove>} – výsledek kola pro hráče.
-        \item \texttt{<prefix>;gameFinish;<totalLength>;<playerID>;<gameID>} – ukončení hry.
-        \item \texttt{<prefix>;rematch;<totalLength>;<playerID>;<gameID>;<gameResult>} – žádost o odvetu po skončení hry.
-    \end{itemize}
-    
-    \item \textbf{DISCONNECT}: V kterémkoli stavu může dojít k odpojení hráče pomocí zprávy \texttt{<prefix>;disconnect;<totalLength>;<playerID>;<gameID>}, která signalizuje ukončení připojení.
-\end{itemize}
-
-Navržený protokol umožňuje efektivní komunikaci mezi klientem a serverem a podporuje různé přechody mezi stavy podle vývoje hry. Struktura zpráv zahrnuje předponu \texttt{<prefix>}, délku zprávy \texttt{<totalLength>}, identifikátor hráče \texttt{<playerID>} a další volitelné parametry, jako jsou \texttt{<gameID>} nebo \texttt{<playerMove>}.
-
-Tento komunikační protokol zajišťuje spolehlivou výměnu dat mezi hráči a serverem a umožňuje flexibilní rozšíření o další funkce nebo herní módy.
-
-
-\section{Ipmlementace}
-
-\section{Uživatelská příručka}
-
-\section{Závěr}
 
 \end{document}

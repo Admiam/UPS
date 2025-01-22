@@ -1,0 +1,23 @@
+\babel@toc {czech}{}\relax 
+\contentsline {section}{\numberline {1}Zadání}{4}{section.1}%
+\contentsline {section}{\numberline {2}Analýza úlohy}{4}{section.2}%
+\contentsline {section}{\numberline {3}Popis síťového protokolu}{5}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Základní formát zprávy}{5}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Typy zpráv}{5}{subsection.3.2}%
+\contentsline {subsubsection}{\numberline {3.2.1}Příklady zpráv z klienta na server}{5}{subsubsection.3.2.1}%
+\contentsline {subsubsection}{\numberline {3.2.2}Příklady zpráv ze serveru na klienta}{5}{subsubsection.3.2.2}%
+\contentsline {subsection}{\numberline {3.3}Validace zpráv}{8}{subsection.3.3}%
+\contentsline {paragraph}{Typické příklady chybně formátovaných nebo nevalidních zpráv:}{8}{section*.3}%
+\contentsline {section}{\numberline {4}Struktura klienta}{9}{section.4}%
+\contentsline {subsection}{\numberline {4.1}\texttt {ServerListener.listen\_to\_server}}{9}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}\texttt {ServerListener.route\_server\_message}}{10}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}\texttt {ServerListener.disconnect\_client}}{11}{subsection.4.3}%
+\contentsline {section}{\numberline {5}Struktura serveru}{12}{section.5}%
+\contentsline {subsection}{\numberline {5.1}\texttt {TCPServer::handleClientData}}{12}{subsection.5.1}%
+\contentsline {subsection}{\numberline {5.2}\texttt {GameServer::reset\_and\_remove\_player}}{13}{subsection.5.2}%
+\contentsline {subsection}{\numberline {5.3}\texttt {TCPServer::run}}{14}{subsection.5.3}%
+\contentsline {subsection}{\numberline {5.4}\texttt {TCPServer::handleNewConnection}}{15}{subsection.5.4}%
+\contentsline {subsection}{\numberline {5.5}\texttt {GameServer::check\_for\_timeouts}}{16}{subsection.5.5}%
+\contentsline {subsection}{\numberline {5.6}\texttt {TCPServer::cleanup}}{17}{subsection.5.6}%
+\contentsline {subsection}{\numberline {5.7}Shrnutí}{17}{subsection.5.7}%
+\contentsline {section}{\numberline {6}Závěr}{18}{section.6}%
